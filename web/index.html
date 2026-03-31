@@ -30,6 +30,15 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 }
 #status-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #f7768e; margin-right: 6px; display: inline-block; }
 #status-bar .dot.connected { background: #9ece6a; }
+#status-bar .cb-btns { display: flex; gap: 6px; }
+.cb-btn {
+  border: none; border-radius: 4px; padding: 3px 10px;
+  background: #3b4261; color: #7aa2f7; font-size: 12px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cb-btn:active { background: #545c7e; }
+.cb-btn.flash { background: #9ece6a; color: #1a1b26; transition: none; }
+#select-mode-btn.active { background: #e0af68; color: #1a1b26; }
 
 /* Keyboard area - bottom half */
 #keyboard {
@@ -98,6 +107,11 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   <div id="terminal-wrap"><div id="terminal"></div></div>
   <div id="status-bar">
     <span><span class="dot" id="status-dot"></span><span id="status-text">Connecting...</span></span>
+    <span class="cb-btns">
+      <button class="cb-btn" id="select-mode-btn">Select</button>
+      <button class="cb-btn" id="copy-btn">Copy</button>
+      <button class="cb-btn" id="paste-btn">Paste</button>
+    </span>
     <span id="status-size"></span>
   </div>
   <div id="keyboard">
@@ -167,6 +181,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   // --- State ---
   let currentLayer = 'alpha';
   let mods = { ctrl: false, alt: false, shift: false, fn: false };
+  let selectMode = false;
   let ws = null;
   let term = null;
   let fitAddon = null;
@@ -454,6 +469,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     const SCROLL_THRESHOLD = 20; // pixels per line scroll
 
     termEl.addEventListener('touchstart', (e) => {
+      if (selectMode) return; // let browser handle selection
       if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
         touchAccum = 0;
@@ -461,6 +477,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }, { passive: true });
 
     termEl.addEventListener('touchmove', (e) => {
+      if (selectMode) return; // let browser handle selection
       if (touchStartY === null || e.touches.length !== 1) return;
       e.preventDefault();
       const deltaY = touchStartY - e.touches[0].clientY;
@@ -478,6 +495,76 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       touchStartY = null;
       touchAccum = 0;
     }, { passive: true });
+
+    // --- Select / Copy / Paste ---
+    function flashBtn(btn) {
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 300);
+    }
+
+    // Select mode toggle: switches between scroll mode and text selection mode
+    document.getElementById('select-mode-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      selectMode = !selectMode;
+      document.getElementById('select-mode-btn').classList.toggle('active', selectMode);
+      // In select mode, allow native text selection on the terminal
+      const viewport = document.querySelector('#terminal .xterm-viewport');
+      if (viewport) viewport.style.touchAction = selectMode ? 'auto' : 'none';
+    });
+
+    // Copy: copy xterm selection to clipboard
+    document.getElementById('copy-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const sel = term.getSelection();
+      if (sel) {
+        try {
+          await navigator.clipboard.writeText(sel);
+          flashBtn(document.getElementById('copy-btn'));
+        } catch {
+          // Fallback for older browsers
+          const ta = document.createElement('textarea');
+          ta.value = sel;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          flashBtn(document.getElementById('copy-btn'));
+        }
+      }
+    });
+
+    // Paste: read clipboard and send to terminal
+    document.getElementById('paste-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          sendInput(text);
+          flashBtn(document.getElementById('paste-btn'));
+        }
+      } catch {
+        // Clipboard API denied — show a temporary input for manual paste
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.style.cssText = 'position:fixed;top:50%;left:10%;width:80%;font-size:16px;padding:8px;z-index:999;border-radius:8px;border:2px solid #7aa2f7;background:#1f2335;color:#c0caf5;';
+        input.placeholder = 'Paste here, then press Enter';
+        document.body.appendChild(input);
+        input.focus();
+        input.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            if (input.value) sendInput(input.value);
+            document.body.removeChild(input);
+          } else if (ev.key === 'Escape') {
+            document.body.removeChild(input);
+          }
+        });
+        input.addEventListener('blur', () => {
+          if (document.body.contains(input)) document.body.removeChild(input);
+        });
+      }
+    });
 
     // Window resize
     window.addEventListener('resize', () => {
