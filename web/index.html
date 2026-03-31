@@ -219,6 +219,13 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     // Disable default keyboard handling (we use our custom keyboard)
     term.attachCustomKeyEventHandler(() => false);
 
+    // Prevent mobile keyboard from appearing when touching the terminal
+    const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
+    if (xtermTextarea) {
+      xtermTextarea.setAttribute('readonly', 'readonly');
+      xtermTextarea.setAttribute('inputmode', 'none');
+    }
+
     new ResizeObserver(() => {
       fitAddon.fit();
       if (ws && ws.readyState === WebSocket.OPEN) {
