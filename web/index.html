@@ -216,15 +216,20 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     term.open(document.getElementById('terminal'));
     fitAddon.fit();
 
-    // Disable default keyboard handling (we use our custom keyboard)
-    term.attachCustomKeyEventHandler(() => false);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
 
-    // Prevent mobile keyboard from appearing when touching the terminal
-    const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
-    if (xtermTextarea) {
-      xtermTextarea.setAttribute('readonly', 'readonly');
-      xtermTextarea.setAttribute('inputmode', 'none');
+    if (isMobile) {
+      // On mobile, block xterm.js keyboard and prevent native keyboard popup
+      term.attachCustomKeyEventHandler(() => false);
+      const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
+      if (xtermTextarea) {
+        xtermTextarea.setAttribute('readonly', 'readonly');
+        xtermTextarea.setAttribute('inputmode', 'none');
+      }
     }
+
+    // Forward xterm.js keyboard input to WebSocket (enables desktop keyboard)
+    term.onData((data) => sendInput(data));
 
     new ResizeObserver(() => {
       fitAddon.fit();
