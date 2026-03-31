@@ -160,6 +160,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     [{l:'F1',seq:'\x1bOP'},{l:'F2',seq:'\x1bOQ'},{l:'F3',seq:'\x1bOR'},{l:'F4',seq:'\x1bOS'},{l:'F5',seq:'\x1b[15~'},{l:'F6',seq:'\x1b[17~'}],
     [{l:'F7',seq:'\x1b[18~'},{l:'F8',seq:'\x1b[19~'},{l:'F9',seq:'\x1b[20~'},{l:'F10',seq:'\x1b[21~'},{l:'F11',seq:'\x1b[23~'},{l:'F12',seq:'\x1b[24~'}],
     [{l:'Home',seq:'\x1b[H'},{l:'End',seq:'\x1b[F'},{l:'PgUp',seq:'\x1b[5~'},{l:'PgDn',seq:'\x1b[6~'},{l:'Ins',seq:'\x1b[2~'},{l:'Del',seq:'\x1b[3~'}],
+    [{l:'▲Ln',action:'scroll-up'},{l:'▼Ln',action:'scroll-down'},{l:'▲5Ln',action:'scroll-up-5'},{l:'▼5Ln',action:'scroll-down-5'},{l:'Top',action:'scroll-top'},{l:'Btm',action:'scroll-bottom'}],
     [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
   ];
 
@@ -319,11 +320,51 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
           btn.textContent = k.l;
           if (k.seq) btn.dataset.seq = k.seq;
           if (k.ch) btn.dataset.ch = k.ch;
+          if (k.action) btn.dataset.action = k.action;
         }
         rowDiv.appendChild(btn);
       });
       container.appendChild(rowDiv);
     });
+  }
+
+  // --- Scroll actions (works in both normal shell and tmux with mouse on) ---
+  function sendMouseWheel(up, count) {
+    // Send SGR mouse wheel escape sequences for tmux/vim/less compatibility
+    // Button 64 = wheel up, 65 = wheel down (SGR encoding)
+    const btn = up ? 64 : 65;
+    for (let i = 0; i < count; i++) {
+      sendInput('\x1b[<' + btn + ';1;1M');
+    }
+  }
+
+  function handleScrollAction(action) {
+    switch (action) {
+      case 'scroll-up':
+        term.scrollLines(-1);
+        sendMouseWheel(true, 1);
+        break;
+      case 'scroll-down':
+        term.scrollLines(1);
+        sendMouseWheel(false, 1);
+        break;
+      case 'scroll-up-5':
+        term.scrollLines(-5);
+        sendMouseWheel(true, 5);
+        break;
+      case 'scroll-down-5':
+        term.scrollLines(5);
+        sendMouseWheel(false, 5);
+        break;
+      case 'scroll-top':
+        term.scrollToTop();
+        sendMouseWheel(true, 100);
+        break;
+      case 'scroll-bottom':
+        term.scrollToBottom();
+        sendMouseWheel(false, 100);
+        break;
+    }
   }
 
   // --- Input processing ---
@@ -391,7 +432,11 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       const btn = e.target.closest('.key');
       if (!btn) return;
       e.preventDefault();
-      processKey(btn.dataset.ch, btn.dataset.seq);
+      if (btn.dataset.action) {
+        handleScrollAction(btn.dataset.action);
+      } else {
+        processKey(btn.dataset.ch, btn.dataset.seq);
+      }
     });
 
     // Arrow keys
