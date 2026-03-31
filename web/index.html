@@ -17,8 +17,9 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 #terminal-wrap {
   flex: 1; min-height: 0; position: relative; background: #1a1b26;
 }
-#terminal { height: 100%; }
+#terminal { height: 100%; overflow: hidden; }
 #terminal .xterm { height: 100%; padding: 4px; }
+#terminal .xterm-viewport { touch-action: none; }
 
 /* Status bar */
 #status-bar {
@@ -179,7 +180,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       cursorStyle: 'bar',
       cursorBlink: true,
       allowProposedApi: true,
-      scrollback: 1000,
+      scrollback: 5000,
       theme: {
         foreground: '#c0caf5',
         background: '#1a1b26',
@@ -400,6 +401,38 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         processKey(null, btn.dataset.seq);
       });
     });
+
+    // Touch scrolling on terminal area
+    const termEl = document.getElementById('terminal');
+    let touchStartY = null;
+    let touchAccum = 0;
+    const SCROLL_THRESHOLD = 20; // pixels per line scroll
+
+    termEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+        touchAccum = 0;
+      }
+    }, { passive: true });
+
+    termEl.addEventListener('touchmove', (e) => {
+      if (touchStartY === null || e.touches.length !== 1) return;
+      e.preventDefault();
+      const deltaY = touchStartY - e.touches[0].clientY;
+      touchAccum += deltaY;
+      touchStartY = e.touches[0].clientY;
+
+      const lines = Math.trunc(touchAccum / SCROLL_THRESHOLD);
+      if (lines !== 0) {
+        term.scrollLines(lines);
+        touchAccum -= lines * SCROLL_THRESHOLD;
+      }
+    }, { passive: false });
+
+    termEl.addEventListener('touchend', () => {
+      touchStartY = null;
+      touchAccum = 0;
+    }, { passive: true });
 
     // Window resize
     window.addEventListener('resize', () => {
