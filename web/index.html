@@ -502,14 +502,68 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       setTimeout(() => btn.classList.remove('flash'), 300);
     }
 
-    // Select mode toggle: switches between scroll mode and text selection mode
+    // Select mode: use term.select() API with touch coordinate to cell conversion
+    let selectStart = null; // {col, row}
+
+    function touchToCell(touch) {
+      const screen = termEl.querySelector('.xterm-screen');
+      if (!screen) return null;
+      const rect = screen.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      const cellW = rect.width / term.cols;
+      const cellH = rect.height / term.rows;
+      const col = Math.max(0, Math.min(term.cols - 1, Math.floor(x / cellW)));
+      const viewportRow = Math.max(0, Math.min(term.rows - 1, Math.floor(y / cellH)));
+      // Convert viewport row to buffer row (term.select uses buffer coordinates)
+      const bufferRow = viewportRow + term.buffer.active.viewportY;
+      return { col, row: bufferRow };
+    }
+
+    function updateSelection(endCell) {
+      if (!selectStart || !endCell) return;
+      let startOff = selectStart.row * term.cols + selectStart.col;
+      let endOff = endCell.row * term.cols + endCell.col;
+      // Ensure start <= end
+      let sCol = selectStart.col, sRow = selectStart.row;
+      if (endOff < startOff) {
+        sCol = endCell.col;
+        sRow = endCell.row;
+        const tmp = startOff;
+        startOff = endOff;
+        endOff = tmp;
+      }
+      const length = endOff - startOff + 1;
+      term.select(sCol, sRow, length);
+    }
+
+    termEl.addEventListener('touchstart', (e) => {
+      if (!selectMode || e.touches.length !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      term.clearSelection();
+      selectStart = touchToCell(e.touches[0]);
+    }, { capture: true });
+
+    termEl.addEventListener('touchmove', (e) => {
+      if (!selectMode || !selectStart || e.touches.length !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      updateSelection(touchToCell(e.touches[0]));
+    }, { capture: true });
+
+    termEl.addEventListener('touchend', (e) => {
+      if (!selectMode || !selectStart) return;
+      e.preventDefault();
+      e.stopPropagation();
+      updateSelection(touchToCell(e.changedTouches[0]));
+      selectStart = null;
+    }, { capture: true });
+
     document.getElementById('select-mode-btn').addEventListener('click', (e) => {
       e.preventDefault();
       selectMode = !selectMode;
       document.getElementById('select-mode-btn').classList.toggle('active', selectMode);
-      // In select mode, allow native text selection on the terminal
-      const viewport = document.querySelector('#terminal .xterm-viewport');
-      if (viewport) viewport.style.touchAction = selectMode ? 'auto' : 'none';
     });
 
     // Copy: copy xterm selection to clipboard
