@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 import asyncssh
 from aiohttp import web, WSMsgType
@@ -13,6 +14,71 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web')
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+HOSTS_FILE = os.path.join(DATA_DIR, 'hosts.json')
+
+
+def load_hosts():
+    if not os.path.exists(HOSTS_FILE):
+        return []
+    with open(HOSTS_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def save_hosts(hosts):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(HOSTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(hosts, f, ensure_ascii=False, indent=2)
+
+
+async def api_hosts_list(request):
+    return web.json_response(load_hosts())
+
+
+async def api_hosts_create(request):
+    data = await request.json()
+    host = data.get('host', '').strip()
+    username = data.get('username', '').strip()
+    if not host or not username:
+        return web.json_response({'error': 'Host and Username are required'}, status=400)
+    hosts = load_hosts()
+    entry = {
+        'id': f"{int(time.time() * 1000):x}{os.urandom(2).hex()}",
+        'label': data.get('label', '').strip() or host,
+        'host': host,
+        'port': int(data.get('port', 22)),
+        'username': username,
+        'password': data.get('password', ''),
+    }
+    hosts.append(entry)
+    save_hosts(hosts)
+    return web.json_response(entry, status=201)
+
+
+async def api_hosts_update(request):
+    host_id = request.match_info['id']
+    data = await request.json()
+    hosts = load_hosts()
+    for h in hosts:
+        if h['id'] == host_id:
+            h['label'] = data.get('label', h.get('label', ''))
+            h['host'] = data.get('host', h['host'])
+            h['port'] = int(data.get('port', h.get('port', 22)))
+            h['username'] = data.get('username', h['username'])
+            h['password'] = data.get('password', h.get('password', ''))
+            save_hosts(hosts)
+            return web.json_response(h)
+    return web.json_response({'error': 'Not found'}, status=404)
+
+
+async def api_hosts_delete(request):
+    host_id = request.match_info['id']
+    hosts = load_hosts()
+    new_hosts = [h for h in hosts if h['id'] != host_id]
+    if len(new_hosts) == len(hosts):
+        return web.json_response({'error': 'Not found'}, status=404)
+    save_hosts(new_hosts)
+    return web.json_response({'ok': True})
 
 
 async def websocket_handler(request):
@@ -141,6 +207,10 @@ async def handle_index(request):
 def create_app():
     app = web.Application()
     app.router.add_get('/ws', websocket_handler)
+    app.router.add_get('/api/hosts', api_hosts_list)
+    app.router.add_post('/api/hosts', api_hosts_create)
+    app.router.add_put('/api/hosts/{id}', api_hosts_update)
+    app.router.add_delete('/api/hosts/{id}', api_hosts_delete)
     app.router.add_get('/', handle_index)
     app.router.add_static('/', STATIC_DIR)
     return app

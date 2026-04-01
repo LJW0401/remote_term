@@ -13,10 +13,111 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
 #app { display: flex; flex-direction: column; height: 100dvh; }
 
-/* Login overlay */
-#login-overlay {
+/* Hosts page */
+#hosts-page {
   position: fixed; inset: 0; z-index: 100;
-  background: #1a1b26; display: flex; align-items: center; justify-content: center;
+  background: #1a1b26; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+#hosts-page.hidden { display: none; }
+
+.hosts-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px; flex-shrink: 0;
+}
+.hosts-header h1 { font-size: 22px; font-weight: 700; color: #c0caf5; }
+.hosts-header-actions { display: flex; gap: 8px; }
+.host-add-btn, .host-quick-btn {
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: #7aa2f7; color: #1a1b26; font-size: 22px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.host-quick-btn { background: #3b4261; color: #7aa2f7; font-size: 16px; }
+.host-add-btn:active, .host-quick-btn:active { opacity: 0.8; }
+
+.hosts-list {
+  flex: 1; overflow-y: auto; padding: 0 16px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hosts-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: #565f89; text-align: center; padding: 40px;
+}
+.hosts-empty .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.hosts-empty p { font-size: 14px; line-height: 1.6; }
+
+.host-card {
+  display: flex; align-items: center; padding: 14px 16px;
+  background: #24283b; border-radius: 10px; margin-bottom: 8px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  border: 1px solid transparent; transition: border-color 0.15s;
+  position: relative; overflow: hidden;
+}
+.host-card:active { border-color: #7aa2f7; }
+.host-card-icon {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: #3b4261; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; margin-right: 14px; flex-shrink: 0; color: #7aa2f7;
+}
+.host-card-info { flex: 1; min-width: 0; }
+.host-card-label {
+  font-size: 15px; font-weight: 600; color: #c0caf5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.host-card-detail {
+  font-size: 12px; color: #565f89; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.host-card-actions {
+  display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px;
+}
+.host-card-actions button {
+  width: 32px; height: 32px; border: none; border-radius: 6px;
+  background: transparent; color: #565f89; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.host-card-actions button:active { background: #3b4261; }
+.host-card-actions .delete-btn:active { color: #f7768e; }
+
+/* Host edit overlay */
+#host-edit-overlay {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+}
+#host-edit-overlay.hidden { display: none; }
+#host-edit-form {
+  width: 90%; max-width: 360px; padding: 24px; border-radius: 12px;
+  background: #24283b; border: 1px solid #3b4261;
+}
+#host-edit-form h2 { text-align: center; margin-bottom: 18px; color: #7aa2f7; font-size: 20px; }
+#host-edit-form .field { margin-bottom: 12px; }
+#host-edit-form label { display: block; font-size: 12px; color: #565f89; margin-bottom: 4px; }
+#host-edit-form input {
+  width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #3b4261;
+  background: #1a1b26; color: #c0caf5; font-size: 16px; outline: none;
+}
+#host-edit-form input:focus { border-color: #7aa2f7; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field-row .field.port { flex: 0 0 80px; }
+.edit-btn-row { display: flex; gap: 8px; margin-top: 4px; }
+.edit-btn-row button {
+  flex: 1; padding: 12px; border: none; border-radius: 6px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+}
+#host-save-btn { background: #7aa2f7; color: #1a1b26; }
+#host-save-btn:active { background: #89b4fa; }
+#host-cancel-btn { background: #3b4261; color: #c0caf5; }
+#host-cancel-btn:active { background: #545c7e; }
+#host-edit-error { color: #f7768e; font-size: 13px; margin-top: 10px; text-align: center; min-height: 20px; }
+
+/* Quick connect overlay (no save) */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
 }
 #login-overlay.hidden { display: none; }
 #login-form {
@@ -31,9 +132,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   background: #1a1b26; color: #c0caf5; font-size: 16px; outline: none;
 }
 #login-form input:focus { border-color: #7aa2f7; }
-.field-row { display: flex; gap: 10px; }
-.field-row .field { flex: 1; }
-.field-row .field.port { flex: 0 0 80px; }
 #ssh-connect-btn {
   width: 100%; padding: 12px; border: none; border-radius: 6px;
   background: #7aa2f7; color: #1a1b26; font-size: 16px; font-weight: 600;
@@ -41,6 +139,13 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 }
 #ssh-connect-btn:active { background: #89b4fa; }
 #ssh-connect-btn:disabled { background: #3b4261; color: #565f89; cursor: not-allowed; }
+.login-btn-row { display: flex; gap: 8px; margin-top: 4px; }
+.login-btn-row button {
+  flex: 1; padding: 12px; border: none; border-radius: 6px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+}
+#quick-back-btn { background: #3b4261; color: #c0caf5; }
+#quick-back-btn:active { background: #545c7e; }
 #ssh-error { color: #f7768e; font-size: 13px; margin-top: 10px; text-align: center; min-height: 20px; }
 
 /* Terminal area - top half */
@@ -133,17 +238,51 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 </style>
 </head>
 <body>
-<!-- SSH Login overlay -->
-<div id="login-overlay">
+<!-- Hosts page -->
+<div id="hosts-page">
+  <div class="hosts-header">
+    <h1>Hosts</h1>
+    <div class="hosts-header-actions">
+      <button class="host-quick-btn" id="quick-connect-btn" title="Quick Connect">&#x26A1;</button>
+      <button class="host-add-btn" id="add-host-btn" title="Add Host">+</button>
+    </div>
+  </div>
+  <div class="hosts-list" id="hosts-list"></div>
+</div>
+
+<!-- Host edit overlay -->
+<div id="host-edit-overlay" class="hidden">
+  <div id="host-edit-form">
+    <h2 id="host-edit-title">New Host</h2>
+    <div class="field"><label>Label</label><input type="text" id="edit-label" placeholder="My Server" autocapitalize="off" autocorrect="off"></div>
+    <div class="field-row">
+      <div class="field"><label>Host</label><input type="text" id="edit-host" placeholder="192.168.1.100" autocapitalize="off" autocorrect="off"></div>
+      <div class="field port"><label>Port</label><input type="number" id="edit-port" value="22"></div>
+    </div>
+    <div class="field"><label>Username</label><input type="text" id="edit-user" placeholder="root" autocapitalize="off" autocorrect="off"></div>
+    <div class="field"><label>Password</label><input type="password" id="edit-pass" placeholder="password"></div>
+    <div class="edit-btn-row">
+      <button id="host-cancel-btn">Cancel</button>
+      <button id="host-save-btn">Save</button>
+    </div>
+    <div id="host-edit-error"></div>
+  </div>
+</div>
+
+<!-- Quick connect overlay -->
+<div id="login-overlay" class="hidden">
   <div id="login-form">
-    <h2>SSH Connect</h2>
+    <h2>Quick Connect</h2>
     <div class="field-row">
       <div class="field"><label>Host</label><input type="text" id="ssh-host" placeholder="192.168.1.100" autocapitalize="off" autocorrect="off"></div>
       <div class="field port"><label>Port</label><input type="number" id="ssh-port" value="22"></div>
     </div>
     <div class="field"><label>Username</label><input type="text" id="ssh-user" placeholder="root" autocapitalize="off" autocorrect="off"></div>
     <div class="field"><label>Password</label><input type="password" id="ssh-pass" placeholder="password"></div>
-    <button id="ssh-connect-btn">Connect</button>
+    <div class="login-btn-row">
+      <button id="quick-back-btn">Back</button>
+      <button id="ssh-connect-btn">Connect</button>
+    </div>
     <div id="ssh-error"></div>
   </div>
 </div>
@@ -208,6 +347,34 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
+  // --- Host API ---
+  async function apiGetHosts() {
+    const res = await fetch('/api/hosts');
+    return res.ok ? res.json() : [];
+  }
+
+  async function apiCreateHost(data) {
+    const res = await fetch('/api/hosts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  }
+
+  async function apiUpdateHost(id, data) {
+    const res = await fetch('/api/hosts/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  }
+
+  async function apiDeleteHost(id) {
+    await fetch('/api/hosts/' + id, { method: 'DELETE' });
+  }
+
   // --- Terminal setup ---
   function initTerminal() {
     term = new Terminal({
@@ -254,11 +421,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   }
 
   function connect(sshConfig) {
-    const connectBtn = document.getElementById('ssh-connect-btn');
-    const errorEl = document.getElementById('ssh-error');
-    connectBtn.disabled = true;
-    connectBtn.textContent = 'Connecting...';
-    errorEl.textContent = '';
+    setStatus(false, 'Connecting...');
 
     ws = new WebSocket(getWsUrl(), ['tty']);
     ws.binaryType = 'arraybuffer';
@@ -282,7 +445,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
       switch (cmd) {
         case '0':
-          // If SSH failed, error text arrives here before WS closes
           term.write(new Uint8Array(payload));
           break;
         case '1':
@@ -292,11 +454,9 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
           try {
             const prefs = JSON.parse(decoder.decode(payload));
             if (prefs.status === 'connected') {
-              // SSH connection established
               sshConnected = true;
+              hideHostsPage();
               document.getElementById('login-overlay').classList.add('hidden');
-              connectBtn.disabled = false;
-              connectBtn.textContent = 'Connect';
               setStatus(true);
               fitAddon.fit();
               sendResize();
@@ -308,25 +468,26 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     };
 
     ws.onclose = () => {
-      setStatus(false);
-      connectBtn.disabled = false;
-      connectBtn.textContent = 'Connect';
       if (!sshConnected) {
-        // Connection failed before SSH was established
-        errorEl.textContent = 'Connection failed. Check the terminal for details.';
+        setStatus(false, 'Connection failed');
+        setTimeout(() => {
+          setStatus(false);
+          showHostsPage();
+        }, 2000);
       } else {
-        // Was connected, now disconnected — show login again
         sshConnected = false;
+        setStatus(false);
         term.clear();
-        document.getElementById('login-overlay').classList.remove('hidden');
+        showHostsPage();
       }
     };
 
     ws.onerror = () => {
-      setStatus(false);
-      connectBtn.disabled = false;
-      connectBtn.textContent = 'Connect';
-      errorEl.textContent = 'WebSocket error. Is the server running?';
+      setStatus(false, 'Server error');
+      setTimeout(() => {
+        setStatus(false);
+        showHostsPage();
+      }, 2000);
     };
   }
 
@@ -338,7 +499,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }
     setStatus(false);
     term.clear();
-    document.getElementById('login-overlay').classList.remove('hidden');
+    showHostsPage();
   }
 
   function sendInput(data) {
@@ -357,9 +518,9 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     document.getElementById('status-size').textContent = term.cols + 'x' + term.rows;
   }
 
-  function setStatus(connected) {
+  function setStatus(connected, text) {
     document.getElementById('status-dot').className = 'dot' + (connected ? ' connected' : '');
-    document.getElementById('status-text').textContent = connected ? 'Connected' : 'Disconnected';
+    document.getElementById('status-text').textContent = text || (connected ? 'Connected' : 'Disconnected');
     if (connected) {
       document.getElementById('status-size').textContent = term.cols + 'x' + term.rows;
     }
@@ -389,9 +550,156 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }
   }
 
+  // --- Host list rendering ---
+  let hostsCache = [];
+
+  async function renderHosts() {
+    const list = document.getElementById('hosts-list');
+    hostsCache = await apiGetHosts();
+
+    if (hostsCache.length === 0) {
+      list.innerHTML = '<div class="hosts-empty"><div class="icon">&#x1F5A5;</div><p>No saved hosts<br><br>Tap <b>+</b> to add a host<br>or <b>&#x26A1;</b> for quick connect</p></div>';
+      return;
+    }
+
+    list.innerHTML = hostsCache.map(h => `
+      <div class="host-card" data-id="${h.id}">
+        <div class="host-card-icon">&#x1F4BB;</div>
+        <div class="host-card-info">
+          <div class="host-card-label">${escapeHtml(h.label || h.host)}</div>
+          <div class="host-card-detail">${escapeHtml(h.username)}@${escapeHtml(h.host)}:${h.port}</div>
+        </div>
+        <div class="host-card-actions">
+          <button class="edit-btn" data-id="${h.id}" title="Edit">&#x270E;</button>
+          <button class="delete-btn" data-id="${h.id}" title="Delete">&#x2715;</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  async function showHostsPage() {
+    document.getElementById('hosts-page').classList.remove('hidden');
+    await renderHosts();
+  }
+
+  function hideHostsPage() {
+    document.getElementById('hosts-page').classList.add('hidden');
+  }
+
   // --- Event binding ---
   function bindEvents() {
-    // SSH login form
+    // --- Host management ---
+    let editingHostId = null;
+
+    document.getElementById('add-host-btn').addEventListener('click', () => {
+      editingHostId = null;
+      document.getElementById('host-edit-title').textContent = 'New Host';
+      document.getElementById('edit-label').value = '';
+      document.getElementById('edit-host').value = '';
+      document.getElementById('edit-port').value = '22';
+      document.getElementById('edit-user').value = '';
+      document.getElementById('edit-pass').value = '';
+      document.getElementById('host-edit-error').textContent = '';
+      document.getElementById('host-edit-overlay').classList.remove('hidden');
+      document.getElementById('edit-label').focus();
+    });
+
+    document.getElementById('host-cancel-btn').addEventListener('click', () => {
+      document.getElementById('host-edit-overlay').classList.add('hidden');
+    });
+
+    document.getElementById('host-save-btn').addEventListener('click', async () => {
+      const label = document.getElementById('edit-label').value.trim();
+      const host = document.getElementById('edit-host').value.trim();
+      const port = parseInt(document.getElementById('edit-port').value) || 22;
+      const username = document.getElementById('edit-user').value.trim();
+      const password = document.getElementById('edit-pass').value;
+
+      if (!host || !username) {
+        document.getElementById('host-edit-error').textContent = 'Host and Username are required';
+        return;
+      }
+
+      const data = { label, host, port, username, password };
+      if (editingHostId) {
+        await apiUpdateHost(editingHostId, data);
+      } else {
+        await apiCreateHost(data);
+      }
+      document.getElementById('host-edit-overlay').classList.add('hidden');
+      await renderHosts();
+    });
+
+    // Handle Enter in edit form
+    document.querySelectorAll('#host-edit-form input').forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('host-save-btn').click(); }
+      });
+    });
+
+    // Host list click delegation
+    document.getElementById('hosts-list').addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('.edit-btn');
+      const deleteBtn = e.target.closest('.delete-btn');
+      const card = e.target.closest('.host-card');
+
+      if (editBtn) {
+        e.stopPropagation();
+        const h = hostsCache.find(h => h.id === editBtn.dataset.id);
+        if (!h) return;
+        editingHostId = h.id;
+        document.getElementById('host-edit-title').textContent = 'Edit Host';
+        document.getElementById('edit-label').value = h.label || '';
+        document.getElementById('edit-host').value = h.host || '';
+        document.getElementById('edit-port').value = h.port || 22;
+        document.getElementById('edit-user').value = h.username || '';
+        document.getElementById('edit-pass').value = h.password || '';
+        document.getElementById('host-edit-error').textContent = '';
+        document.getElementById('host-edit-overlay').classList.remove('hidden');
+        document.getElementById('edit-label').focus();
+        return;
+      }
+
+      if (deleteBtn) {
+        e.stopPropagation();
+        const h = hostsCache.find(h => h.id === deleteBtn.dataset.id);
+        if (h && confirm(`Delete "${h.label || h.host}"?`)) {
+          await apiDeleteHost(h.id);
+          await renderHosts();
+        }
+        return;
+      }
+
+      if (card) {
+        const h = hostsCache.find(h => h.id === card.dataset.id);
+        if (!h) return;
+        hideHostsPage();
+        connect({ host: h.host, port: h.port, username: h.username, password: h.password });
+      }
+    });
+
+    // Quick connect
+    document.getElementById('quick-connect-btn').addEventListener('click', () => {
+      document.getElementById('ssh-host').value = '';
+      document.getElementById('ssh-port').value = '22';
+      document.getElementById('ssh-user').value = '';
+      document.getElementById('ssh-pass').value = '';
+      document.getElementById('ssh-error').textContent = '';
+      document.getElementById('login-overlay').classList.remove('hidden');
+      document.getElementById('ssh-host').focus();
+    });
+
+    document.getElementById('quick-back-btn').addEventListener('click', () => {
+      document.getElementById('login-overlay').classList.add('hidden');
+    });
+
+    // SSH quick connect form
     const connectBtn = document.getElementById('ssh-connect-btn');
     const loginInputs = document.querySelectorAll('#login-form input');
 
@@ -405,6 +713,8 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         document.getElementById('ssh-error').textContent = 'Host and Username are required';
         return;
       }
+      document.getElementById('login-overlay').classList.add('hidden');
+      hideHostsPage();
       connect({ host, port, username, password });
     }
 
@@ -663,8 +973,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     bindEvents();
-    // Focus the host input for convenience
-    document.getElementById('ssh-host').focus();
+    showHostsPage();
   });
 })();
 </script>
