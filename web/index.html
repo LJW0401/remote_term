@@ -325,7 +325,12 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   }
 
   // --- Scroll actions ---
+  function isAlternateBuffer() {
+    return term.buffer.active.type === 'alternate';
+  }
+
   function sendMouseWheel(up, count) {
+    if (!isAlternateBuffer()) return;
     const btn = up ? 64 : 65;
     for (let i = 0; i < count; i++) {
       sendInput('\x1b[<' + btn + ';1;1M');
