@@ -463,11 +463,27 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       termEl.style.transform = overScrollY > 0 ? `translateY(-${overScrollY}px)` : '';
     }
 
+    // Double-tap to send Tab
+    let lastTapTime = 0;
+    let touchMoved = false;
+
     termWrap.addEventListener('touchstart', (e) => {
       if (selectMode) return;
+      touchMoved = false;
       if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
         touchAccum = 0;
+      }
+    }, { passive: true });
+
+    termWrap.addEventListener('touchend', (e) => {
+      if (selectMode || touchMoved) return;
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        sendInput('\t');
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
       }
     }, { passive: true });
 
@@ -475,6 +491,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       if (selectMode) return;
       if (touchStartY === null || e.touches.length !== 1) return;
       e.preventDefault();
+      touchMoved = true;
       const deltaY = touchStartY - e.touches[0].clientY;
       touchStartY = e.touches[0].clientY;
 
