@@ -1,34 +1,27 @@
 # Remote Term
 
-手机远程控制电脑终端，iPhone Safari 直接访问，无需安装任何 App。
+手机远程控制电脑终端，iPhone Safari 直接访问，无需安装任何 App。内置 Web SSH 客户端，支持从浏览器直接 SSH 连接到任意服务器。
 
 ## 方案概述
 
-使用 **ttyd** 在被控电脑上启动 Web 终端服务，手机通过浏览器访问操作。
+自建 Web SSH 服务，手机通过浏览器填写 SSH 连接信息，即可操作远程终端。
 
 ```
-被控电脑 (ttyd) <--- WebSocket ---> iPhone Safari (xterm.js)
+iPhone Safari ---> Web SSH Server (Python) ---> SSH ---> 目标服务器
 ```
 
 ## 部署步骤
 
-### 1. 安装 ttyd
+### 1. 安装依赖
 
 ```bash
-sudo apt install ttyd
+pip install -r server/requirements.txt
 ```
 
 ### 2. 启动服务
 
 ```bash
-# 基本启动
-ttyd -p 8080 bash
-
-# 带密码保护（推荐）
-ttyd -p 8080 -c 用户名:密码 bash
-
-# 带 SSL 加密
-ttyd -p 8080 -S -C cert.pem -K key.pem -c 用户名:密码 bash
+python server/server.py -p 8080
 ```
 
 ### 3. 配置防火墙
@@ -52,18 +45,20 @@ iPhone 连接同一 WiFi，Safari 打开：
 http://<电脑IP>:8080
 ```
 
+在登录页面填写 SSH 连接信息（Host、Port、Username、Password），点击 Connect 即可。
+
 查看电脑 IP：
 
 ```bash
 hostname -I
 ```
 
-## 互联网访问：ttyd + frp
+## 互联网访问：Web SSH + frp
 
-通过 frp 内网穿透，实现从任何网络用 iPhone Safari 访问被控电脑终端。
+通过 frp 内网穿透，实现从任何网络用 iPhone Safari SSH 连接远程服务器。
 
 ```
-iPhone Safari ---> VPS (frps :9080) ---> 被控电脑 (frpc) ---> ttyd (:8080)
+iPhone Safari ---> VPS (frps :9080) ---> 被控电脑 (frpc) ---> Web SSH Server (:8080) ---> SSH ---> 目标服务器
 ```
 
 ### 1. VPS 端部署 frps
@@ -94,7 +89,7 @@ VPS 防火墙放行：
 
 ```bash
 sudo ufw allow 7000/tcp   # frp 通信端口
-sudo ufw allow 9080/tcp   # 映射出来的 ttyd 端口
+sudo ufw allow 9080/tcp   # 映射出来的端口
 ```
 
 ### 2. 被控电脑端部署 frpc
@@ -109,17 +104,17 @@ serverPort = 7000
 token = "你的密钥"
 
 [[proxies]]
-name = "web-terminal"
+name = "web-ssh"
 type = "tcp"
 localIP = "127.0.0.1"
 localPort = 8080
 remotePort = 9080
 ```
 
-启动（先启动 ttyd，再启动 frpc）：
+启动（先启动 Web SSH Server，再启动 frpc）：
 
 ```bash
-ttyd -p 8080 -c 用户名:密码 bash
+python server/server.py -p 8080
 ./frpc -c frpc.toml
 ```
 
@@ -131,20 +126,19 @@ Safari 打开：
 http://VPS公网IP:9080
 ```
 
-输入 ttyd 的用户名和密码即可操作终端。
+在登录页面填写目标服务器的 SSH 信息即可连接。
 
 ## 自定义移动端界面
 
 本项目提供了针对手机优化的自定义终端页面（`web/index.html`），上半屏为终端窗口，下半屏为虚拟键盘。
 
-### 使用方式
-
-```bash
-# 用自定义页面启动 ttyd
-ttyd -p 8080 -I web/index.html -c 用户名:密码 bash
-```
-
 ### 功能特性
+
+**SSH 连接**
+
+- 页面内 SSH 登录表单，填写 Host/Port/Username/Password 直接连接
+- 连接失败显示错误信息，支持断开重连
+- 状态栏提供 Disconnect 按钮
 
 **虚拟键盘**
 
@@ -176,7 +170,6 @@ ttyd -p 8080 -I web/index.html -c 用户名:密码 bash
 
 - Tokyo Night 配色主题
 - 触摸终端区域不会唤起手机原生键盘
-- 断线自动重连（3 秒间隔）
 - 状态栏显示连接状态和终端尺寸
 
 ## 其他隧道方案
@@ -189,9 +182,8 @@ ttyd -p 8080 -I web/index.html -c 用户名:密码 bash
 
 ## 安全注意事项
 
-- **不要**将 ttyd 直接暴露到公网，必须通过隧道访问
-- 始终启用密码认证（`-c` 参数）
-- 互联网访问时必须启用 HTTPS
-- `auth.token` 两端必须一致，建议用 `openssl rand -hex 32` 生成随机密钥
-- 生产环境建议用 systemd 管理 frps/frpc 进程，防止掉线
+- 互联网访问时**必须启用 HTTPS**（SSH 密码通过 WebSocket 传输）
 - 建议在 VPS 上用 nginx 反向代理 + Let's Encrypt 加 HTTPS
+- `auth.token` 两端必须一致，建议用 `openssl rand -hex 32` 生成随机密钥
+- 生产环境建议用 systemd 管理进程，防止掉线
+- 当前 SSH 连接不验证服务器 host key（`known_hosts=None`），请确保网络可信
