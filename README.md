@@ -125,8 +125,13 @@ remotePort = 9080
 启动（先启动 Web SSH Server，再启动 frpc）：
 
 ```bash
+# 手动启动
 python server/server.py -p 8080
 ./frpc -c frpc.toml
+
+# 或使用 systemd 服务管理脚本
+./services/remote_term_service.sh install && ./services/remote_term_service.sh start
+./services/frpc_service.sh install && ./services/frpc_service.sh start
 ```
 
 ### 3. iPhone 访问
@@ -164,6 +169,9 @@ http://VPS公网IP:9080
 | ^C | 中断进程 |
 | ^L | 清屏 |
 | ^Z | 挂起进程 |
+| ^W | 删除前一个单词 |
+
+双击终端区域也可发送 Tab（自动补全）。
 
 ### tmux 快捷键
 
@@ -175,6 +183,7 @@ http://VPS公网IP:9080
 | ^B+( | 切换到上一个会话 |
 | ^B+) | 切换到下一个会话 |
 | ^B+S | 打开会话列表 |
+| Clear | 清屏并清除 tmux 滚动缓冲区 |
 
 ### 方向键与翻页
 
@@ -191,6 +200,7 @@ http://VPS公网IP:9080
 - 在终端区域上下滑动可浏览历史输出（支持 5000 行回滚）
 - 在 tmux（需 `set -g mouse on`）中触摸滑动同样有效
 - 仅在 alternate buffer（tmux/vim/less）中发送鼠标滚轮序列，普通 shell 中不会产生乱码
+- 滚到底部后继续上滑可过度滚动，将底部内容推到屏幕中部方便查看；下滑或有新输出时自动归位
 
 ### 复制粘贴
 
