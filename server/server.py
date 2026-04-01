@@ -134,15 +134,15 @@ async def websocket_handler(request):
     return ws
 
 
-async def handle_token(request):
-    return web.json_response({'token': ''})
+async def handle_index(request):
+    return web.FileResponse(os.path.join(STATIC_DIR, 'index.html'))
 
 
 def create_app():
     app = web.Application()
     app.router.add_get('/ws', websocket_handler)
-    app.router.add_get('/token', handle_token)
-    app.router.add_static('/', STATIC_DIR, show_index=True)
+    app.router.add_get('/', handle_index)
+    app.router.add_static('/', STATIC_DIR)
     return app
 
 
