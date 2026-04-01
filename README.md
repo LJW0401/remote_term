@@ -15,6 +15,8 @@ iPhone Safari ---> Web SSH Server (Python) ---> SSH ---> 目标服务器
 ### 1. 安装依赖
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r server/requirements.txt
 ```
 
@@ -22,6 +24,15 @@ pip install -r server/requirements.txt
 
 ```bash
 python server/server.py -p 8080
+```
+
+或使用 systemd 服务管理脚本：
+
+```bash
+./services/remote_term_service.sh install   # 安装并启用开机自启
+./services/remote_term_service.sh start     # 启动服务
+./services/remote_term_service.sh restart   # 重启服务
+./services/remote_term_service.sh logs      # 查看日志
 ```
 
 ### 3. 配置防火墙
@@ -128,49 +139,72 @@ http://VPS公网IP:9080
 
 在登录页面填写目标服务器的 SSH 信息即可连接。
 
-## 自定义移动端界面
+## 功能特性
 
-本项目提供了针对手机优化的自定义终端页面（`web/index.html`），上半屏为终端窗口，下半屏为虚拟键盘。
-
-### 功能特性
-
-**SSH 连接**
+### SSH 连接
 
 - 页面内 SSH 登录表单，填写 Host/Port/Username/Password 直接连接
 - 连接失败显示错误信息，支持断开重连
 - 状态栏提供 Disconnect 按钮
 
-**虚拟键盘**
+### 输入方式
 
-- **修饰键**：Ctrl / Alt / Shift / Fn（单击激活，按键后自动释放）
-- **三层布局**：ABC（字母）、123（数字/标点）、!@#（符号）
-- **Fn 层**：F1-F12、Home/End、PgUp/PgDn
-- **方向键**：始终可见
+- 点击终端区域唤起**系统原生键盘**输入
+- 桌面端可直接使用物理键盘
 
-**终端滚动**
+### 快捷键栏
+
+底部提供常用快捷键按钮，无需依赖系统键盘：
+
+| 按键 | 功能 |
+|------|------|
+| Tab | 自动补全（左侧，占两行高） |
+| Enter | 回车确认（右侧，占两行高） |
+| Esc | 退出/取消 |
+| ^C | 中断进程 |
+| ^L | 清屏 |
+| ^Z | 挂起进程 |
+
+### tmux 快捷键
+
+独立一行的 tmux 常用操作：
+
+| 按键 | 功能 |
+|------|------|
+| ^B+D | 离开当前会话（detach） |
+| ^B+( | 切换到上一个会话 |
+| ^B+) | 切换到下一个会话 |
+| ^B+S | 打开会话列表 |
+
+### 方向键与翻页
+
+- 方向键：◀ ▼ ▲ ▶
+- PgUp / PgDn：翻页浏览
+
+### 粘贴栏
+
+- 底部独立粘贴栏：左侧输入框用于粘贴内容，右侧 Paste 按钮发送到终端
+- 支持 Enter 键直接发送
+
+### 终端滚动
 
 - 在终端区域上下滑动可浏览历史输出（支持 5000 行回滚）
-- Fn 层提供滚动按钮：▲Ln/▼Ln（单行）、▲5Ln/▼5Ln（5行）、Top/Btm（顶底）
-- 滚动按钮同时发送鼠标滚轮序列，在 tmux（需 `set -g mouse on`）中同样有效
+- 在 tmux（需 `set -g mouse on`）中触摸滑动同样有效
+- 仅在 alternate buffer（tmux/vim/less）中发送鼠标滚轮序列，普通 shell 中不会产生乱码
 
-**复制粘贴**
+### 复制粘贴
 
-- 状态栏提供 **Select** / **Copy** / **Paste** 三个按钮
+- 状态栏提供 **Select** / **Copy** 按钮
 - 点击 **Select** 进入选择模式（按钮变黄），在终端区域拖动手指选中文本
+- 选择模式下自动禁止键盘弹出，避免 resize 清除选区
 - 点击 **Copy** 复制选中文本到剪贴板
-- 点击 **Paste** 从剪贴板读取内容并发送到终端
-- 再次点击 **Select** 退出选择模式，恢复滑动滚动
+- 再次点击 **Select** 退出选择模式，恢复正常输入
 
-**桌面端兼容**
-
-- 在电脑浏览器访问时可正常使用物理键盘输入
-- 仅在移动端禁用原生键盘弹出，避免与虚拟键盘冲突
-
-**其他**
+### 其他
 
 - Tokyo Night 配色主题
-- 触摸终端区域不会唤起手机原生键盘
 - 状态栏显示连接状态和终端尺寸
+- 服务端日志输出，方便排查连接问题
 
 ## 其他隧道方案
 
