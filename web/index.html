@@ -494,6 +494,18 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       e.preventDefault();
       selectMode = !selectMode;
       document.getElementById('select-mode-btn').classList.toggle('active', selectMode);
+      // In select mode, prevent keyboard popup which causes resize and clears selection
+      const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
+      if (xtermTextarea) {
+        if (selectMode) {
+          xtermTextarea.setAttribute('readonly', 'readonly');
+          xtermTextarea.setAttribute('inputmode', 'none');
+          xtermTextarea.blur();
+        } else {
+          xtermTextarea.removeAttribute('readonly');
+          xtermTextarea.removeAttribute('inputmode');
+        }
+      }
     });
 
     document.getElementById('copy-btn').addEventListener('click', async (e) => {
