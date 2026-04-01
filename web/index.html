@@ -13,6 +13,36 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
 #app { display: flex; flex-direction: column; height: 100dvh; }
 
+/* Login overlay */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: #1a1b26; display: flex; align-items: center; justify-content: center;
+}
+#login-overlay.hidden { display: none; }
+#login-form {
+  width: 90%; max-width: 360px; padding: 24px; border-radius: 12px;
+  background: #24283b; border: 1px solid #3b4261;
+}
+#login-form h2 { text-align: center; margin-bottom: 18px; color: #7aa2f7; font-size: 20px; }
+#login-form .field { margin-bottom: 12px; }
+#login-form label { display: block; font-size: 12px; color: #565f89; margin-bottom: 4px; }
+#login-form input {
+  width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #3b4261;
+  background: #1a1b26; color: #c0caf5; font-size: 16px; outline: none;
+}
+#login-form input:focus { border-color: #7aa2f7; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field-row .field.port { flex: 0 0 80px; }
+#ssh-connect-btn {
+  width: 100%; padding: 12px; border: none; border-radius: 6px;
+  background: #7aa2f7; color: #1a1b26; font-size: 16px; font-weight: 600;
+  cursor: pointer; margin-top: 4px;
+}
+#ssh-connect-btn:active { background: #89b4fa; }
+#ssh-connect-btn:disabled { background: #3b4261; color: #565f89; cursor: not-allowed; }
+#ssh-error { color: #f7768e; font-size: 13px; margin-top: 10px; text-align: center; min-height: 20px; }
+
 /* Terminal area - top half */
 #terminal-wrap {
   flex: 1; min-height: 0; position: relative; background: #1a1b26;
@@ -46,96 +76,116 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   user-select: none; -webkit-user-select: none;
 }
 
-/* Modifier row */
-.mod-row {
-  display: flex; gap: 4px; margin-bottom: 5px; padding: 0 2px;
+/* Paste row */
+.paste-row {
+  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
 }
-.mod-btn {
-  flex: 1; height: 36px; border: none; border-radius: 6px;
-  background: #3b4261; color: #7aa2f7; font-size: 13px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background 0.1s;
-  -webkit-tap-highlight-color: transparent;
+.paste-row input {
+  flex: 1; height: 36px; border: 1px solid #3b4261; border-radius: 6px;
+  background: #1a1b26; color: #c0caf5; font-size: 14px; padding: 0 8px;
+  outline: none;
 }
-.mod-btn.active { background: #7aa2f7; color: #1a1b26; }
-.mod-btn:active { background: #545c7e; }
+.paste-row input:focus { border-color: #7aa2f7; }
+.paste-row button {
+  width: 64px; height: 36px; border: none; border-radius: 6px;
+  background: #7aa2f7; color: #1a1b26; font-size: 13px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.paste-row button:active { background: #89b4fa; }
 
-/* Key rows */
-.key-row {
-  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px; justify-content: center;
+/* Shortcut grid */
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 36px 36px;
+  gap: 3px; margin-bottom: 3px; padding: 0 2px;
 }
-.key {
-  min-width: 32px; height: 40px; border: none; border-radius: 6px;
-  background: #292e42; color: #c0caf5; font-size: 15px;
+.shortcut-key {
+  border: none; border-radius: 6px;
+  background: #292e42; color: #7aa2f7; font-size: 12px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex: 1; max-width: 44px;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.08s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.key:active { background: #3b4261; }
-.key.wide { flex: 1.6; max-width: 72px; font-size: 12px; color: #7aa2f7; }
-.key.space { flex: 5; max-width: none; }
-.key.enter-key { background: #7aa2f7; color: #1a1b26; font-weight: 600; }
-.key.enter-key:active { background: #89b4fa; }
+.shortcut-key:active { background: #3b4261; }
+.shortcut-key.tab-key {
+  grid-column: 1; grid-row: 1 / 3;
+}
+.shortcut-key.enter-key {
+  grid-column: 6; grid-row: 1 / 3;
+  background: #7aa2f7; color: #1a1b26; font-size: 14px;
+}
+.shortcut-key.enter-key:active { background: #89b4fa; }
 
 /* Arrow keys cluster */
 .arrow-row {
   display: flex; gap: 3px; justify-content: center; margin-bottom: 3px; padding: 0 2px;
 }
 .arrow-key {
-  width: 48px; height: 36px; border: none; border-radius: 6px;
+  flex: 1; height: 36px; border: none; border-radius: 6px;
   background: #292e42; color: #bb9af7; font-size: 18px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  max-width: 64px;
 }
+.arrow-key.pg { font-size: 12px; font-weight: 600; }
 .arrow-key:active { background: #3b4261; }
 
-/* Layer switch tabs */
-.layer-tabs {
-  display: flex; gap: 4px; margin-bottom: 5px; padding: 0 2px;
-}
-.layer-tab {
-  flex: 1; height: 30px; border: none; border-radius: 6px;
-  background: #292e42; color: #565f89; font-size: 12px; font-weight: 600;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.layer-tab.active { background: #3b4261; color: #c0caf5; }
 </style>
 </head>
 <body>
+<!-- SSH Login overlay -->
+<div id="login-overlay">
+  <div id="login-form">
+    <h2>SSH Connect</h2>
+    <div class="field-row">
+      <div class="field"><label>Host</label><input type="text" id="ssh-host" placeholder="192.168.1.100" autocapitalize="off" autocorrect="off"></div>
+      <div class="field port"><label>Port</label><input type="number" id="ssh-port" value="22"></div>
+    </div>
+    <div class="field"><label>Username</label><input type="text" id="ssh-user" placeholder="root" autocapitalize="off" autocorrect="off"></div>
+    <div class="field"><label>Password</label><input type="password" id="ssh-pass" placeholder="password"></div>
+    <button id="ssh-connect-btn">Connect</button>
+    <div id="ssh-error"></div>
+  </div>
+</div>
+
 <div id="app">
   <div id="terminal-wrap"><div id="terminal"></div></div>
   <div id="status-bar">
-    <span><span class="dot" id="status-dot"></span><span id="status-text">Connecting...</span></span>
+    <span><span class="dot" id="status-dot"></span><span id="status-text">Disconnected</span></span>
     <span class="cb-btns">
       <button class="cb-btn" id="select-mode-btn">Select</button>
       <button class="cb-btn" id="copy-btn">Copy</button>
-      <button class="cb-btn" id="paste-btn">Paste</button>
+      <button class="cb-btn" id="disconnect-btn">Disconnect</button>
     </span>
     <span id="status-size"></span>
   </div>
   <div id="keyboard">
-    <!-- Modifier keys -->
-    <div class="mod-row">
-      <button class="mod-btn" data-mod="ctrl" id="mod-ctrl">Ctrl</button>
-      <button class="mod-btn" data-mod="alt" id="mod-alt">Alt</button>
-      <button class="mod-btn" data-mod="shift" id="mod-shift">Shift</button>
-      <button class="mod-btn" data-mod="fn" id="mod-fn">Fn</button>
+    <!-- Paste row -->
+    <div class="paste-row">
+      <input type="text" id="paste-input" placeholder="Paste here..." autocapitalize="off" autocorrect="off">
+      <button id="paste-btn">Paste</button>
     </div>
-    <!-- Layer tabs -->
-    <div class="layer-tabs">
-      <button class="layer-tab active" data-layer="alpha">ABC</button>
-      <button class="layer-tab" data-layer="num">123</button>
-      <button class="layer-tab" data-layer="sym">!@#</button>
+    <!-- Shortcut + Tmux keys grid -->
+    <div class="shortcut-grid">
+      <button class="shortcut-key tab-key" data-seq="&#x09;">Tab</button>
+      <button class="shortcut-key" data-seq="&#x1b;">Esc</button>
+      <button class="shortcut-key" data-seq="&#x03;">^C</button>
+      <button class="shortcut-key" data-seq="&#x0c;">^L</button>
+      <button class="shortcut-key" data-seq="&#x1a;">^Z</button>
+      <button class="shortcut-key enter-key" data-seq="&#x0d;">Enter</button>
+      <button class="shortcut-key" data-macro="tmux-detach">^B+D</button>
+      <button class="shortcut-key" data-macro="tmux-prev-session">^B+(</button>
+      <button class="shortcut-key" data-macro="tmux-next-session">^B+)</button>
+      <button class="shortcut-key" data-macro="tmux-session-list">^B+S</button>
     </div>
-    <!-- Key layers (populated by JS) -->
-    <div id="key-layers"></div>
-    <!-- Arrow keys (always visible) -->
+    <!-- Arrow keys + PgUp/PgDn -->
     <div class="arrow-row">
+      <button class="arrow-key pg" data-seq="&#x1b;[5~">PgUp</button>
       <button class="arrow-key" data-seq="&#x1b;[D">&#x25C0;</button>
       <button class="arrow-key" data-seq="&#x1b;[B">&#x25BC;</button>
       <button class="arrow-key" data-seq="&#x1b;[A">&#x25B2;</button>
       <button class="arrow-key" data-seq="&#x1b;[C">&#x25B6;</button>
+      <button class="arrow-key pg" data-seq="&#x1b;[6~">PgDn</button>
     </div>
   </div>
 </div>
@@ -147,41 +197,9 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 (function() {
   'use strict';
 
-  // --- Keyboard layout definitions ---
-  const LAYERS = {
-    alpha: [
-      ['q','w','e','r','t','y','u','i','o','p'],
-      ['a','s','d','f','g','h','j','k','l'],
-      [{l:'Tab',w:true,seq:'\t'},'z','x','c','v','b','n','m',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ],
-    num: [
-      ['1','2','3','4','5','6','7','8','9','0'],
-      ['-','=','[',']','\\',';',"'",',','.'],
-      [{l:'Tab',w:true,seq:'\t'},'/','`','~','!','@','#','$',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ],
-    sym: [
-      ['!','@','#','$','%','^','&','*','(',')'],
-      ['_','+','{','}','|',':','"','<','>'],
-      [{l:'Tab',w:true,seq:'\t'},'?','~','`','\\','/','.','=',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ]
-  };
-
-  // Fn layer: F1-F12, Home/End, PgUp/PgDn
-  const FN_LAYER = [
-    [{l:'F1',seq:'\x1bOP'},{l:'F2',seq:'\x1bOQ'},{l:'F3',seq:'\x1bOR'},{l:'F4',seq:'\x1bOS'},{l:'F5',seq:'\x1b[15~'},{l:'F6',seq:'\x1b[17~'}],
-    [{l:'F7',seq:'\x1b[18~'},{l:'F8',seq:'\x1b[19~'},{l:'F9',seq:'\x1b[20~'},{l:'F10',seq:'\x1b[21~'},{l:'F11',seq:'\x1b[23~'},{l:'F12',seq:'\x1b[24~'}],
-    [{l:'Home',seq:'\x1b[H'},{l:'End',seq:'\x1b[F'},{l:'PgUp',seq:'\x1b[5~'},{l:'PgDn',seq:'\x1b[6~'},{l:'Ins',seq:'\x1b[2~'},{l:'Del',seq:'\x1b[3~'}],
-    [{l:'▲Ln',action:'scroll-up'},{l:'▼Ln',action:'scroll-down'},{l:'▲5Ln',action:'scroll-up-5'},{l:'▼5Ln',action:'scroll-down-5'},{l:'Top',action:'scroll-top'},{l:'Btm',action:'scroll-bottom'}],
-    [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-  ];
-
   // --- State ---
-  let currentLayer = 'alpha';
-  let mods = { ctrl: false, alt: false, shift: false, fn: false };
   let selectMode = false;
+  let sshConnected = false;
   let ws = null;
   let term = null;
   let fitAddon = null;
@@ -216,19 +234,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     term.open(document.getElementById('terminal'));
     fitAddon.fit();
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
-
-    if (isMobile) {
-      // On mobile, block xterm.js keyboard and prevent native keyboard popup
-      term.attachCustomKeyEventHandler(() => false);
-      const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
-      if (xtermTextarea) {
-        xtermTextarea.setAttribute('readonly', 'readonly');
-        xtermTextarea.setAttribute('inputmode', 'none');
-      }
-    }
-
-    // Forward xterm.js keyboard input to WebSocket (enables desktop keyboard)
+    // Forward keyboard input to WebSocket
     term.onData((data) => sendInput(data));
 
     new ResizeObserver(() => {
@@ -239,35 +245,32 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }).observe(document.getElementById('terminal'));
   }
 
-  // --- WebSocket ---
+  // --- WebSocket / SSH connection ---
   function getWsUrl() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const base = location.pathname.replace(/\/+$/, '');
-    return proto + '//' + location.host + base + '/ws';
+    return proto + '//' + location.host + '/ws';
   }
 
-  async function fetchToken() {
-    const base = location.pathname.replace(/\/+$/, '');
-    try {
-      const resp = await fetch(base + '/token');
-      const data = await resp.json();
-      return data.token || '';
-    } catch {
-      return '';
-    }
-  }
+  function connect(sshConfig) {
+    const connectBtn = document.getElementById('ssh-connect-btn');
+    const errorEl = document.getElementById('ssh-error');
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting...';
+    errorEl.textContent = '';
 
-  async function connect() {
-    const token = await fetchToken();
     ws = new WebSocket(getWsUrl(), ['tty']);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
-      const cols = term.cols;
-      const rows = term.rows;
-      const msg = JSON.stringify({ AuthToken: token, columns: cols, rows: rows });
+      const msg = JSON.stringify({
+        host: sshConfig.host,
+        port: sshConfig.port,
+        username: sshConfig.username,
+        password: sshConfig.password,
+        columns: term.cols,
+        rows: term.rows,
+      });
       ws.send(encoder.encode(msg));
-      setStatus(true);
     };
 
     ws.onmessage = (ev) => {
@@ -277,6 +280,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
       switch (cmd) {
         case '0':
+          // If SSH failed, error text arrives here before WS closes
           term.write(new Uint8Array(payload));
           break;
         case '1':
@@ -285,8 +289,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         case '2':
           try {
             const prefs = JSON.parse(decoder.decode(payload));
+            if (prefs.status === 'connected') {
+              // SSH connection established
+              sshConnected = true;
+              document.getElementById('login-overlay').classList.add('hidden');
+              connectBtn.disabled = false;
+              connectBtn.textContent = 'Connect';
+              setStatus(true);
+              fitAddon.fit();
+              sendResize();
+            }
             if (prefs.fontSize) term.options.fontSize = prefs.fontSize;
-            fitAddon.fit();
           } catch {}
           break;
       }
@@ -294,12 +307,36 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
     ws.onclose = () => {
       setStatus(false);
-      setTimeout(connect, 3000);
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect';
+      if (!sshConnected) {
+        // Connection failed before SSH was established
+        errorEl.textContent = 'Connection failed. Check the terminal for details.';
+      } else {
+        // Was connected, now disconnected — show login again
+        sshConnected = false;
+        term.clear();
+        document.getElementById('login-overlay').classList.remove('hidden');
+      }
     };
 
     ws.onerror = () => {
       setStatus(false);
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect';
+      errorEl.textContent = 'WebSocket error. Is the server running?';
     };
+  }
+
+  function disconnect() {
+    if (ws) {
+      sshConnected = false;
+      ws.close();
+      ws = null;
+    }
+    setStatus(false);
+    term.clear();
+    document.getElementById('login-overlay').classList.remove('hidden');
   }
 
   function sendInput(data) {
@@ -326,39 +363,13 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }
   }
 
-  // --- Keyboard rendering ---
-  function renderKeyboard() {
-    const container = document.getElementById('key-layers');
-    container.innerHTML = '';
-    const rows = mods.fn ? FN_LAYER : LAYERS[currentLayer];
-
-    rows.forEach(row => {
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'key-row';
-      row.forEach(k => {
-        const btn = document.createElement('button');
-        if (typeof k === 'string') {
-          const display = (mods.shift && currentLayer === 'alpha') ? k.toUpperCase() : k;
-          btn.className = 'key';
-          btn.textContent = display;
-          btn.dataset.ch = display;
-        } else {
-          btn.className = 'key' + (k.w ? ' wide' : '') + (k.cls ? ' ' + k.cls : '');
-          btn.textContent = k.l;
-          if (k.seq) btn.dataset.seq = k.seq;
-          if (k.ch) btn.dataset.ch = k.ch;
-          if (k.action) btn.dataset.action = k.action;
-        }
-        rowDiv.appendChild(btn);
-      });
-      container.appendChild(rowDiv);
-    });
+  // --- Scroll actions ---
+  function isAlternateBuffer() {
+    return term.buffer.active.type === 'alternate';
   }
 
-  // --- Scroll actions (works in both normal shell and tmux with mouse on) ---
   function sendMouseWheel(up, count) {
-    // Send SGR mouse wheel escape sequences for tmux/vim/less compatibility
-    // Button 64 = wheel up, 65 = wheel down (SGR encoding)
+    if (!isAlternateBuffer()) return;
     const btn = up ? 64 : 65;
     for (let i = 0; i < count; i++) {
       sendInput('\x1b[<' + btn + ';1;1M');
@@ -367,110 +378,70 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 
   function handleScrollAction(action) {
     switch (action) {
-      case 'scroll-up':
-        term.scrollLines(-1);
-        sendMouseWheel(true, 1);
-        break;
-      case 'scroll-down':
-        term.scrollLines(1);
-        sendMouseWheel(false, 1);
-        break;
-      case 'scroll-up-5':
-        term.scrollLines(-5);
-        sendMouseWheel(true, 5);
-        break;
-      case 'scroll-down-5':
-        term.scrollLines(5);
-        sendMouseWheel(false, 5);
-        break;
-      case 'scroll-top':
-        term.scrollToTop();
-        sendMouseWheel(true, 100);
-        break;
-      case 'scroll-bottom':
-        term.scrollToBottom();
-        sendMouseWheel(false, 100);
-        break;
-    }
-  }
-
-  // --- Input processing ---
-  function processKey(ch, seq) {
-    let data = seq || ch;
-    if (!data) return;
-
-    // Apply shift to single chars
-    if (mods.shift && ch && ch.length === 1 && !seq) {
-      data = ch.toUpperCase();
-    }
-
-    // Ctrl modifier: convert a-z to control characters
-    if (mods.ctrl && data.length === 1) {
-      const code = data.toUpperCase().charCodeAt(0);
-      if (code >= 65 && code <= 90) {
-        data = String.fromCharCode(code - 64);
-      }
-    }
-
-    // Alt modifier: prepend ESC
-    if (mods.alt && data.length === 1) {
-      data = '\x1b' + data;
-    }
-
-    sendInput(data);
-
-    // Auto-release one-shot modifiers (except when locked via double-tap, not implemented yet)
-    if (mods.ctrl) { mods.ctrl = false; document.getElementById('mod-ctrl').classList.remove('active'); }
-    if (mods.alt) { mods.alt = false; document.getElementById('mod-alt').classList.remove('active'); }
-    if (mods.shift) {
-      mods.shift = false;
-      document.getElementById('mod-shift').classList.remove('active');
-      if (currentLayer === 'alpha') renderKeyboard();
+      case 'scroll-up':    term.scrollLines(-1); sendMouseWheel(true, 1); break;
+      case 'scroll-down':  term.scrollLines(1);  sendMouseWheel(false, 1); break;
+      case 'scroll-up-5':  term.scrollLines(-5); sendMouseWheel(true, 5); break;
+      case 'scroll-down-5':term.scrollLines(5);  sendMouseWheel(false, 5); break;
+      case 'scroll-top':   term.scrollToTop();   sendMouseWheel(true, 100); break;
+      case 'scroll-bottom':term.scrollToBottom(); sendMouseWheel(false, 100); break;
     }
   }
 
   // --- Event binding ---
   function bindEvents() {
-    // Modifier buttons
-    document.querySelectorAll('.mod-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // SSH login form
+    const connectBtn = document.getElementById('ssh-connect-btn');
+    const loginInputs = document.querySelectorAll('#login-form input');
+
+    function doConnect() {
+      const host = document.getElementById('ssh-host').value.trim();
+      const port = parseInt(document.getElementById('ssh-port').value) || 22;
+      const username = document.getElementById('ssh-user').value.trim();
+      const password = document.getElementById('ssh-pass').value;
+
+      if (!host || !username) {
+        document.getElementById('ssh-error').textContent = 'Host and Username are required';
+        return;
+      }
+      connect({ host, port, username, password });
+    }
+
+    connectBtn.addEventListener('click', (e) => { e.preventDefault(); doConnect(); });
+    loginInputs.forEach(input => {
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doConnect(); } });
+    });
+
+    // Disconnect button
+    document.getElementById('disconnect-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      disconnect();
+    });
+
+    // Shortcut keys
+    const MACROS = {
+      'tmux-detach':       ['\x02', 'd'],
+      'tmux-prev-session': ['\x02', '('],
+      'tmux-next-session': ['\x02', ')'],
+      'tmux-session-list': ['\x02', 's'],
+    };
+    document.querySelectorAll('.shortcut-key').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        const mod = btn.dataset.mod;
-        mods[mod] = !mods[mod];
-        btn.classList.toggle('active', mods[mod]);
-        if (mod === 'fn' || (mod === 'shift' && currentLayer === 'alpha')) {
-          renderKeyboard();
+        const macro = MACROS[btn.dataset.macro];
+        if (macro) {
+          sendInput(macro[0]);
+          setTimeout(() => sendInput(macro[1]), 50);
+        } else {
+          sendInput(btn.dataset.seq);
         }
       });
-    });
-
-    // Layer tabs
-    document.querySelectorAll('.layer-tab').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        currentLayer = tab.dataset.layer;
-        document.querySelectorAll('.layer-tab').forEach(t => t.classList.toggle('active', t === tab));
-        renderKeyboard();
-      });
-    });
-
-    // Key press (event delegation)
-    document.getElementById('key-layers').addEventListener('pointerdown', (e) => {
-      const btn = e.target.closest('.key');
-      if (!btn) return;
-      e.preventDefault();
-      if (btn.dataset.action) {
-        handleScrollAction(btn.dataset.action);
-      } else {
-        processKey(btn.dataset.ch, btn.dataset.seq);
-      }
     });
 
     // Arrow keys
     document.querySelectorAll('.arrow-key').forEach(btn => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        processKey(null, btn.dataset.seq);
+        sendInput(btn.dataset.seq);
       });
     });
 
@@ -478,10 +449,10 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     const termEl = document.getElementById('terminal');
     let touchStartY = null;
     let touchAccum = 0;
-    const SCROLL_THRESHOLD = 20; // pixels per line scroll
+    const SCROLL_THRESHOLD = 20;
 
     termEl.addEventListener('touchstart', (e) => {
-      if (selectMode) return; // let browser handle selection
+      if (selectMode) return;
       if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
         touchAccum = 0;
@@ -489,7 +460,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }, { passive: true });
 
     termEl.addEventListener('touchmove', (e) => {
-      if (selectMode) return; // let browser handle selection
+      if (selectMode) return;
       if (touchStartY === null || e.touches.length !== 1) return;
       e.preventDefault();
       const deltaY = touchStartY - e.touches[0].clientY;
@@ -499,6 +470,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       const lines = Math.trunc(touchAccum / SCROLL_THRESHOLD);
       if (lines !== 0) {
         term.scrollLines(lines);
+        sendMouseWheel(lines < 0, Math.abs(lines));
         touchAccum -= lines * SCROLL_THRESHOLD;
       }
     }, { passive: false });
@@ -514,8 +486,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       setTimeout(() => btn.classList.remove('flash'), 300);
     }
 
-    // Select mode: use term.select() API with touch coordinate to cell conversion
-    let selectStart = null; // {col, row}
+    let selectStart = null;
 
     function touchToCell(touch) {
       const screen = termEl.querySelector('.xterm-screen');
@@ -527,7 +498,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       const cellH = rect.height / term.rows;
       const col = Math.max(0, Math.min(term.cols - 1, Math.floor(x / cellW)));
       const viewportRow = Math.max(0, Math.min(term.rows - 1, Math.floor(y / cellH)));
-      // Convert viewport row to buffer row (term.select uses buffer coordinates)
       const bufferRow = viewportRow + term.buffer.active.viewportY;
       return { col, row: bufferRow };
     }
@@ -536,7 +506,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       if (!selectStart || !endCell) return;
       let startOff = selectStart.row * term.cols + selectStart.col;
       let endOff = endCell.row * term.cols + endCell.col;
-      // Ensure start <= end
       let sCol = selectStart.col, sRow = selectStart.row;
       if (endOff < startOff) {
         sCol = endCell.col;
@@ -576,9 +545,20 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       e.preventDefault();
       selectMode = !selectMode;
       document.getElementById('select-mode-btn').classList.toggle('active', selectMode);
+      // In select mode, prevent keyboard popup which causes resize and clears selection
+      const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
+      if (xtermTextarea) {
+        if (selectMode) {
+          xtermTextarea.setAttribute('readonly', 'readonly');
+          xtermTextarea.setAttribute('inputmode', 'none');
+          xtermTextarea.blur();
+        } else {
+          xtermTextarea.removeAttribute('readonly');
+          xtermTextarea.removeAttribute('inputmode');
+        }
+      }
     });
 
-    // Copy: copy xterm selection to clipboard
     document.getElementById('copy-btn').addEventListener('click', async (e) => {
       e.preventDefault();
       const sel = term.getSelection();
@@ -587,7 +567,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
           await navigator.clipboard.writeText(sel);
           flashBtn(document.getElementById('copy-btn'));
         } catch {
-          // Fallback for older browsers
           const ta = document.createElement('textarea');
           ta.value = sel;
           ta.style.position = 'fixed';
@@ -601,34 +580,20 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       }
     });
 
-    // Paste: read clipboard and send to terminal
-    document.getElementById('paste-btn').addEventListener('click', async (e) => {
+    const pasteInput = document.getElementById('paste-input');
+    document.getElementById('paste-btn').addEventListener('click', (e) => {
       e.preventDefault();
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          sendInput(text);
-          flashBtn(document.getElementById('paste-btn'));
-        }
-      } catch {
-        // Clipboard API denied — show a temporary input for manual paste
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.style.cssText = 'position:fixed;top:50%;left:10%;width:80%;font-size:16px;padding:8px;z-index:999;border-radius:8px;border:2px solid #7aa2f7;background:#1f2335;color:#c0caf5;';
-        input.placeholder = 'Paste here, then press Enter';
-        document.body.appendChild(input);
-        input.focus();
-        input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') {
-            if (input.value) sendInput(input.value);
-            document.body.removeChild(input);
-          } else if (ev.key === 'Escape') {
-            document.body.removeChild(input);
-          }
-        });
-        input.addEventListener('blur', () => {
-          if (document.body.contains(input)) document.body.removeChild(input);
-        });
+      const text = pasteInput.value;
+      if (text) {
+        sendInput(text);
+        pasteInput.value = '';
+        flashBtn(document.getElementById('paste-btn'));
+      }
+    });
+    pasteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('paste-btn').click();
       }
     });
 
@@ -642,9 +607,9 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   // --- Init ---
   document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
-    renderKeyboard();
     bindEvents();
-    connect();
+    // Focus the host input for convenience
+    document.getElementById('ssh-host').focus();
   });
 })();
 </script>
