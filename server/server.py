@@ -200,6 +200,22 @@ async def websocket_handler(request):
     return ws
 
 
+async def api_browse_dir(request):
+    """List subdirectories of a given path for the file browser."""
+    path = request.query.get('path', '~')
+    path = os.path.realpath(os.path.expanduser(path))
+    if not os.path.isdir(path):
+        return web.json_response({'error': 'Not a directory'}, status=400)
+    dirs = []
+    try:
+        for entry in sorted(os.scandir(path), key=lambda e: e.name.lower()):
+            if entry.is_dir(follow_symlinks=False):
+                dirs.append(entry.name)
+    except PermissionError:
+        return web.json_response({'error': 'Permission denied'}, status=403)
+    return web.json_response({'path': path, 'dirs': dirs})
+
+
 async def handle_index(request):
     return web.FileResponse(os.path.join(STATIC_DIR, 'index.html'))
 
@@ -207,6 +223,7 @@ async def handle_index(request):
 def create_app():
     app = web.Application()
     app.router.add_get('/ws', websocket_handler)
+    app.router.add_get('/api/browse', api_browse_dir)
     app.router.add_get('/api/hosts', api_hosts_list)
     app.router.add_post('/api/hosts', api_hosts_create)
     app.router.add_put('/api/hosts/{id}', api_hosts_update)
