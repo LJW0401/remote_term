@@ -76,6 +76,23 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   user-select: none; -webkit-user-select: none;
 }
 
+/* Paste row */
+.paste-row {
+  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
+}
+.paste-row input {
+  flex: 1; height: 36px; border: 1px solid #3b4261; border-radius: 6px;
+  background: #1a1b26; color: #c0caf5; font-size: 14px; padding: 0 8px;
+  outline: none;
+}
+.paste-row input:focus { border-color: #7aa2f7; }
+.paste-row button {
+  width: 64px; height: 36px; border: none; border-radius: 6px;
+  background: #7aa2f7; color: #1a1b26; font-size: 13px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.paste-row button:active { background: #89b4fa; }
+
 /* Shortcut row */
 .shortcut-row {
   display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
@@ -125,12 +142,16 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     <span class="cb-btns">
       <button class="cb-btn" id="select-mode-btn">Select</button>
       <button class="cb-btn" id="copy-btn">Copy</button>
-      <button class="cb-btn" id="paste-btn">Paste</button>
       <button class="cb-btn" id="disconnect-btn">Disconnect</button>
     </span>
     <span id="status-size"></span>
   </div>
   <div id="keyboard">
+    <!-- Paste row -->
+    <div class="paste-row">
+      <input type="text" id="paste-input" placeholder="Paste here..." autocapitalize="off" autocorrect="off">
+      <button id="paste-btn">Paste</button>
+    </div>
     <!-- Shortcut keys -->
     <div class="shortcut-row">
       <button class="shortcut-key" data-seq="&#x1b;">Esc</button>
@@ -534,32 +555,20 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       }
     });
 
-    document.getElementById('paste-btn').addEventListener('click', async (e) => {
+    const pasteInput = document.getElementById('paste-input');
+    document.getElementById('paste-btn').addEventListener('click', (e) => {
       e.preventDefault();
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          sendInput(text);
-          flashBtn(document.getElementById('paste-btn'));
-        }
-      } catch {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.style.cssText = 'position:fixed;top:50%;left:10%;width:80%;font-size:16px;padding:8px;z-index:999;border-radius:8px;border:2px solid #7aa2f7;background:#1f2335;color:#c0caf5;';
-        input.placeholder = 'Paste here, then press Enter';
-        document.body.appendChild(input);
-        input.focus();
-        input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') {
-            if (input.value) sendInput(input.value);
-            document.body.removeChild(input);
-          } else if (ev.key === 'Escape') {
-            document.body.removeChild(input);
-          }
-        });
-        input.addEventListener('blur', () => {
-          if (document.body.contains(input)) document.body.removeChild(input);
-        });
+      const text = pasteInput.value;
+      if (text) {
+        sendInput(text);
+        pasteInput.value = '';
+        flashBtn(document.getElementById('paste-btn'));
+      }
+    });
+    pasteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('paste-btn').click();
       }
     });
 
