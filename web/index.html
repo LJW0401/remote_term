@@ -93,28 +93,41 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 }
 .paste-row button:active { background: #89b4fa; }
 
-/* Shortcut row */
-.shortcut-row {
-  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
+/* Shortcut grid */
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 36px 36px;
+  gap: 3px; margin-bottom: 3px; padding: 0 2px;
 }
 .shortcut-key {
-  flex: 1; height: 36px; border: none; border-radius: 6px;
+  border: none; border-radius: 6px;
   background: #292e42; color: #7aa2f7; font-size: 12px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .shortcut-key:active { background: #3b4261; }
+.shortcut-key.tab-key {
+  grid-column: 1; grid-row: 1 / 3;
+}
+.shortcut-key.enter-key {
+  grid-column: 6; grid-row: 1 / 3;
+  background: #7aa2f7; color: #1a1b26; font-size: 14px;
+}
+.shortcut-key.enter-key:active { background: #89b4fa; }
 
 /* Arrow keys cluster */
 .arrow-row {
   display: flex; gap: 3px; justify-content: center; margin-bottom: 3px; padding: 0 2px;
 }
 .arrow-key {
-  width: 48px; height: 36px; border: none; border-radius: 6px;
+  flex: 1; height: 36px; border: none; border-radius: 6px;
   background: #292e42; color: #bb9af7; font-size: 18px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  max-width: 64px;
 }
+.arrow-key.pg { font-size: 12px; font-weight: 600; }
 .arrow-key:active { background: #3b4261; }
 
 </style>
@@ -152,28 +165,27 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       <input type="text" id="paste-input" placeholder="Paste here..." autocapitalize="off" autocorrect="off">
       <button id="paste-btn">Paste</button>
     </div>
-    <!-- Shortcut keys -->
-    <div class="shortcut-row">
+    <!-- Shortcut + Tmux keys grid -->
+    <div class="shortcut-grid">
+      <button class="shortcut-key tab-key" data-seq="&#x09;">Tab</button>
       <button class="shortcut-key" data-seq="&#x1b;">Esc</button>
-      <button class="shortcut-key" data-seq="&#x09;">Tab</button>
       <button class="shortcut-key" data-seq="&#x03;">^C</button>
       <button class="shortcut-key" data-seq="&#x0c;">^L</button>
       <button class="shortcut-key" data-seq="&#x1a;">^Z</button>
-      <button class="shortcut-key" data-seq="&#x0d;">Enter</button>
-    </div>
-    <!-- Tmux keys -->
-    <div class="shortcut-row">
+      <button class="shortcut-key enter-key" data-seq="&#x0d;">Enter</button>
       <button class="shortcut-key" data-macro="tmux-detach">^B+D</button>
       <button class="shortcut-key" data-macro="tmux-prev-session">^B+(</button>
       <button class="shortcut-key" data-macro="tmux-next-session">^B+)</button>
       <button class="shortcut-key" data-macro="tmux-session-list">^B+S</button>
     </div>
-    <!-- Arrow keys -->
+    <!-- Arrow keys + PgUp/PgDn -->
     <div class="arrow-row">
+      <button class="arrow-key pg" data-seq="&#x1b;[5~">PgUp</button>
       <button class="arrow-key" data-seq="&#x1b;[D">&#x25C0;</button>
       <button class="arrow-key" data-seq="&#x1b;[B">&#x25BC;</button>
       <button class="arrow-key" data-seq="&#x1b;[A">&#x25B2;</button>
       <button class="arrow-key" data-seq="&#x1b;[C">&#x25B6;</button>
+      <button class="arrow-key pg" data-seq="&#x1b;[6~">PgDn</button>
     </div>
   </div>
 </div>
