@@ -201,19 +201,67 @@ async def websocket_handler(request):
 
 
 async def api_browse_dir(request):
-    """List subdirectories of a given path for the file browser."""
+    """List subdirectories and files of a given path for the file browser."""
     path = request.query.get('path', '~')
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isdir(path):
         return web.json_response({'error': 'Not a directory'}, status=400)
     dirs = []
+    files = []
     try:
         for entry in sorted(os.scandir(path), key=lambda e: e.name.lower()):
             if entry.is_dir(follow_symlinks=False):
                 dirs.append(entry.name)
+            elif entry.is_file(follow_symlinks=False):
+                try:
+                    size = entry.stat().st_size
+                except OSError:
+                    size = 0
+                files.append({'name': entry.name, 'size': size})
     except PermissionError:
         return web.json_response({'error': 'Permission denied'}, status=403)
-    return web.json_response({'path': path, 'dirs': dirs})
+    return web.json_response({'path': path, 'dirs': dirs, 'files': files})
+
+
+async def api_upload(request):
+    """Upload a file to the specified directory."""
+    reader = await request.multipart()
+    dest_dir = None
+    filename = None
+    filepath = None
+
+    async for part in reader:
+        if part.name == 'path':
+            dest_dir = (await part.text()).strip()
+            dest_dir = os.path.realpath(os.path.expanduser(dest_dir))
+        elif part.name == 'file':
+            filename = part.filename
+            if not dest_dir or not os.path.isdir(dest_dir):
+                return web.json_response({'error': 'Invalid destination'}, status=400)
+            filepath = os.path.join(dest_dir, filename)
+            with open(filepath, 'wb') as f:
+                while True:
+                    chunk = await part.read_chunk()
+                    if not chunk:
+                        break
+                    f.write(chunk)
+
+    if not filepath:
+        return web.json_response({'error': 'No file provided'}, status=400)
+    size = os.path.getsize(filepath)
+    log.info(f'File uploaded: {filepath} ({size} bytes)')
+    return web.json_response({'ok': True, 'path': filepath, 'size': size})
+
+
+async def api_download(request):
+    """Download a file."""
+    path = request.query.get('path', '')
+    path = os.path.realpath(os.path.expanduser(path))
+    if not os.path.isfile(path):
+        return web.json_response({'error': 'File not found'}, status=404)
+    return web.FileResponse(path, headers={
+        'Content-Disposition': f'attachment; filename="{os.path.basename(path)}"'
+    })
 
 
 async def handle_index(request):
@@ -224,6 +272,8 @@ def create_app():
     app = web.Application()
     app.router.add_get('/ws', websocket_handler)
     app.router.add_get('/api/browse', api_browse_dir)
+    app.router.add_post('/api/upload', api_upload)
+    app.router.add_get('/api/download', api_download)
     app.router.add_get('/api/hosts', api_hosts_list)
     app.router.add_post('/api/hosts', api_hosts_create)
     app.router.add_put('/api/hosts/{id}', api_hosts_update)

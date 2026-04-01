@@ -296,6 +296,28 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   cursor: pointer;
 }
 .dialog-footer button:active { background: #89b4fa; }
+.dialog-footer .btn-row { display: flex; gap: 8px; }
+.dialog-footer .btn-row button { flex: 1; }
+.dialog-footer .upload-btn { background: #9ece6a; }
+.dialog-footer .upload-btn:active { background: #73daca; }
+
+.file-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid #1a1b26;
+  cursor: pointer; color: #c0caf5; font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.file-item:active { background: #3b4261; }
+.file-item .left { display: flex; align-items: center; min-width: 0; flex: 1; }
+.file-item .left .icon { margin-right: 10px; color: #565f89; flex-shrink: 0; }
+.file-item .left .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-item .size { color: #565f89; font-size: 12px; margin-left: 8px; flex-shrink: 0; }
+
+.upload-status {
+  padding: 8px 16px; font-size: 12px; color: #9ece6a;
+  text-align: center; display: none;
+}
+.upload-status.show { display: block; }
 
 /* Prompt dialog */
 .prompt-body {
@@ -374,13 +396,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 <div id="filebrowser-overlay" class="dialog-overlay hidden">
   <div class="dialog-box">
     <div class="dialog-header">
-      <h3>Select Folder</h3>
+      <h3 id="fb-title">Select Folder</h3>
       <button class="dialog-close" id="fb-close">&#x2715;</button>
     </div>
     <div class="dir-path" id="fb-path"></div>
     <div class="dir-list" id="fb-list"></div>
+    <div class="upload-status" id="fb-upload-status"></div>
     <div class="dialog-footer">
-      <button id="fb-select">cd here</button>
+      <div class="btn-row">
+        <button id="fb-select">cd here</button>
+        <button id="fb-upload" class="upload-btn">Upload here</button>
+      </div>
     </div>
   </div>
 </div>
@@ -439,7 +465,10 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       <button class="quick-btn" id="quick-cd-btn">cd...</button>
       <button class="quick-btn" id="quick-tmux-work-btn">tmux work</button>
       <button class="quick-btn" id="quick-tmux-new-btn">tmux new</button>
+      <button class="quick-btn" id="quick-upload-btn">Upload</button>
+      <button class="quick-btn" id="quick-download-btn">Download</button>
     </div>
+    <input type="file" id="upload-file-input" multiple style="display:none">
     <!-- Arrow keys + PgUp/PgDn -->
     <div class="arrow-row">
       <button class="arrow-key pg" data-seq="&#x1b;[5~">PgUp</button>
@@ -884,6 +913,14 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     // --- Quick actions ---
     // File browser state
     let fbCurrentPath = '';
+    let fbMode = 'cd'; // 'cd', 'upload', 'download'
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    }
 
     async function fbNavigate(path) {
       const res = await fetch('/api/browse?path=' + encodeURIComponent(path));
@@ -897,18 +934,69 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       html += data.dirs.map(d =>
         `<div class="dir-item" data-path="${data.path === '/' ? '' : data.path}/${d}"><span class="icon">&#x1F4C1;</span> ${d}</div>`
       ).join('');
+      if (fbMode === 'download' && data.files) {
+        html += data.files.map(f =>
+          `<div class="file-item" data-path="${data.path === '/' ? '' : data.path}/${f.name}"><span class="left"><span class="icon">&#x1F4C4;</span><span class="name">${f.name}</span></span><span class="size">${formatSize(f.size)}</span></div>`
+        ).join('');
+      }
       list.innerHTML = html;
+    }
+
+    function openFileBrowser(mode) {
+      fbMode = mode;
+      const title = document.getElementById('fb-title');
+      const selectBtn = document.getElementById('fb-select');
+      const uploadBtn = document.getElementById('fb-upload');
+      const statusEl = document.getElementById('fb-upload-status');
+      statusEl.classList.remove('show');
+      statusEl.textContent = '';
+      if (mode === 'cd') {
+        title.textContent = 'Select Folder';
+        selectBtn.style.display = '';
+        uploadBtn.style.display = 'none';
+      } else if (mode === 'upload') {
+        title.textContent = 'Upload To...';
+        selectBtn.style.display = 'none';
+        uploadBtn.style.display = '';
+      } else {
+        title.textContent = 'Download File';
+        selectBtn.style.display = 'none';
+        uploadBtn.style.display = 'none';
+      }
+      document.getElementById('filebrowser-overlay').classList.remove('hidden');
     }
 
     document.getElementById('quick-cd-btn').addEventListener('pointerdown', async (e) => {
       e.preventDefault();
-      document.getElementById('filebrowser-overlay').classList.remove('hidden');
+      openFileBrowser('cd');
+      await fbNavigate('~');
+    });
+
+    document.getElementById('quick-upload-btn').addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      openFileBrowser('upload');
+      await fbNavigate('~');
+    });
+
+    document.getElementById('quick-download-btn').addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      openFileBrowser('download');
       await fbNavigate('~');
     });
 
     document.getElementById('fb-list').addEventListener('click', async (e) => {
-      const item = e.target.closest('.dir-item');
-      if (item) await fbNavigate(item.dataset.path);
+      const dirItem = e.target.closest('.dir-item');
+      if (dirItem) { await fbNavigate(dirItem.dataset.path); return; }
+      const fileItem = e.target.closest('.file-item');
+      if (fileItem && fbMode === 'download') {
+        const filePath = fileItem.dataset.path;
+        const a = document.createElement('a');
+        a.href = '/api/download?path=' + encodeURIComponent(filePath);
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     });
 
     document.getElementById('fb-select').addEventListener('click', () => {
@@ -916,6 +1004,31 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         sendInput('cd ' + fbCurrentPath.replace(/ /g, '\\ ') + '\r');
       }
       document.getElementById('filebrowser-overlay').classList.add('hidden');
+    });
+
+    // Upload
+    document.getElementById('fb-upload').addEventListener('click', () => {
+      document.getElementById('upload-file-input').click();
+    });
+
+    document.getElementById('upload-file-input').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files.length || !fbCurrentPath) return;
+      const statusEl = document.getElementById('fb-upload-status');
+      statusEl.classList.add('show');
+      let done = 0;
+      for (const file of files) {
+        statusEl.textContent = `Uploading ${file.name}... (${done + 1}/${files.length})`;
+        const form = new FormData();
+        form.append('path', fbCurrentPath);
+        form.append('file', file);
+        await fetch('/api/upload', { method: 'POST', body: form });
+        done++;
+      }
+      statusEl.textContent = `${done} file(s) uploaded`;
+      e.target.value = '';
+      await fbNavigate(fbCurrentPath);
+      setTimeout(() => statusEl.classList.remove('show'), 2000);
     });
 
     document.getElementById('fb-close').addEventListener('click', () => {
