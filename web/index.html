@@ -47,7 +47,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 #terminal-wrap {
   flex: 1; min-height: 0; position: relative; background: #1a1b26;
 }
-#terminal { height: 100%; overflow: hidden; }
+#terminal { height: 100%; overflow: hidden; transition: transform 0.1s ease-out; }
 #terminal .xterm { height: 100%; padding: 4px; }
 #terminal .xterm-viewport { touch-action: none; }
 
@@ -445,13 +445,25 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       });
     });
 
-    // Touch scrolling on terminal area
+    // Touch scrolling on terminal area (with over-scroll support)
+    const termWrap = document.getElementById('terminal-wrap');
     const termEl = document.getElementById('terminal');
     let touchStartY = null;
     let touchAccum = 0;
+    let overScrollY = 0;
     const SCROLL_THRESHOLD = 20;
+    const MAX_OVERSCROLL = 300;
 
-    termEl.addEventListener('touchstart', (e) => {
+    function isAtBottom() {
+      const buf = term.buffer.active;
+      return buf.viewportY >= buf.baseY;
+    }
+
+    function applyOverScroll() {
+      termEl.style.transform = overScrollY > 0 ? `translateY(-${overScrollY}px)` : '';
+    }
+
+    termWrap.addEventListener('touchstart', (e) => {
       if (selectMode) return;
       if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
@@ -459,26 +471,47 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       }
     }, { passive: true });
 
-    termEl.addEventListener('touchmove', (e) => {
+    termWrap.addEventListener('touchmove', (e) => {
       if (selectMode) return;
       if (touchStartY === null || e.touches.length !== 1) return;
       e.preventDefault();
       const deltaY = touchStartY - e.touches[0].clientY;
-      touchAccum += deltaY;
       touchStartY = e.touches[0].clientY;
 
+      // If over-scrolled and swiping down (deltaY < 0), reduce over-scroll first
+      if (overScrollY > 0 && deltaY < 0) {
+        overScrollY = Math.max(0, overScrollY + deltaY);
+        applyOverScroll();
+        return;
+      }
+
+      touchAccum += deltaY;
       const lines = Math.trunc(touchAccum / SCROLL_THRESHOLD);
       if (lines !== 0) {
-        term.scrollLines(lines);
-        sendMouseWheel(lines < 0, Math.abs(lines));
+        if (lines > 0 && isAtBottom() && !isAlternateBuffer()) {
+          // At bottom, allow over-scroll to push content up
+          overScrollY = Math.min(MAX_OVERSCROLL, overScrollY + Math.abs(lines) * SCROLL_THRESHOLD);
+          applyOverScroll();
+        } else {
+          term.scrollLines(lines);
+          sendMouseWheel(lines < 0, Math.abs(lines));
+        }
         touchAccum -= lines * SCROLL_THRESHOLD;
       }
     }, { passive: false });
 
-    termEl.addEventListener('touchend', () => {
+    termWrap.addEventListener('touchend', () => {
       touchStartY = null;
       touchAccum = 0;
     }, { passive: true });
+
+    // Reset over-scroll when new output arrives (content changed)
+    term.onWriteParsed(() => {
+      if (overScrollY > 0) {
+        overScrollY = 0;
+        applyOverScroll();
+      }
+    });
 
     // --- Select / Copy / Paste ---
     function flashBtn(btn) {
