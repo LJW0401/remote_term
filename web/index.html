@@ -76,37 +76,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   user-select: none; -webkit-user-select: none;
 }
 
-/* Modifier row */
-.mod-row {
-  display: flex; gap: 4px; margin-bottom: 5px; padding: 0 2px;
+/* Shortcut row */
+.shortcut-row {
+  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
 }
-.mod-btn {
+.shortcut-key {
   flex: 1; height: 36px; border: none; border-radius: 6px;
-  background: #3b4261; color: #7aa2f7; font-size: 13px; font-weight: 600;
+  background: #292e42; color: #7aa2f7; font-size: 12px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background 0.1s;
-  -webkit-tap-highlight-color: transparent;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.mod-btn.active { background: #7aa2f7; color: #1a1b26; }
-.mod-btn:active { background: #545c7e; }
-
-/* Key rows */
-.key-row {
-  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px; justify-content: center;
-}
-.key {
-  min-width: 32px; height: 40px; border: none; border-radius: 6px;
-  background: #292e42; color: #c0caf5; font-size: 15px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex: 1; max-width: 44px;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.08s;
-}
-.key:active { background: #3b4261; }
-.key.wide { flex: 1.6; max-width: 72px; font-size: 12px; color: #7aa2f7; }
-.key.space { flex: 5; max-width: none; }
-.key.enter-key { background: #7aa2f7; color: #1a1b26; font-weight: 600; }
-.key.enter-key:active { background: #89b4fa; }
+.shortcut-key:active { background: #3b4261; }
 
 /* Arrow keys cluster */
 .arrow-row {
@@ -120,16 +100,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 }
 .arrow-key:active { background: #3b4261; }
 
-/* Layer switch tabs */
-.layer-tabs {
-  display: flex; gap: 4px; margin-bottom: 5px; padding: 0 2px;
-}
-.layer-tab {
-  flex: 1; height: 30px; border: none; border-radius: 6px;
-  background: #292e42; color: #565f89; font-size: 12px; font-weight: 600;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.layer-tab.active { background: #3b4261; color: #c0caf5; }
 </style>
 </head>
 <body>
@@ -161,22 +131,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     <span id="status-size"></span>
   </div>
   <div id="keyboard">
-    <!-- Modifier keys -->
-    <div class="mod-row">
-      <button class="mod-btn" data-mod="ctrl" id="mod-ctrl">Ctrl</button>
-      <button class="mod-btn" data-mod="alt" id="mod-alt">Alt</button>
-      <button class="mod-btn" data-mod="shift" id="mod-shift">Shift</button>
-      <button class="mod-btn" data-mod="fn" id="mod-fn">Fn</button>
+    <!-- Shortcut keys -->
+    <div class="shortcut-row">
+      <button class="shortcut-key" data-seq="&#x1b;">Esc</button>
+      <button class="shortcut-key" data-seq="&#x09;">Tab</button>
+      <button class="shortcut-key" data-seq="&#x03;">^C</button>
+      <button class="shortcut-key" data-seq="&#x0c;">^L</button>
+      <button class="shortcut-key" data-seq="&#x13;">^S</button>
+      <button class="shortcut-key" data-seq="&#x1a;">^Z</button>
+      <button class="shortcut-key" data-seq="&#x0d;">Enter</button>
     </div>
-    <!-- Layer tabs -->
-    <div class="layer-tabs">
-      <button class="layer-tab active" data-layer="alpha">ABC</button>
-      <button class="layer-tab" data-layer="num">123</button>
-      <button class="layer-tab" data-layer="sym">!@#</button>
-    </div>
-    <!-- Key layers (populated by JS) -->
-    <div id="key-layers"></div>
-    <!-- Arrow keys (always visible) -->
+    <!-- Arrow keys -->
     <div class="arrow-row">
       <button class="arrow-key" data-seq="&#x1b;[D">&#x25C0;</button>
       <button class="arrow-key" data-seq="&#x1b;[B">&#x25BC;</button>
@@ -193,39 +158,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 (function() {
   'use strict';
 
-  // --- Keyboard layout definitions ---
-  const LAYERS = {
-    alpha: [
-      ['q','w','e','r','t','y','u','i','o','p'],
-      ['a','s','d','f','g','h','j','k','l'],
-      [{l:'Tab',w:true,seq:'\t'},'z','x','c','v','b','n','m',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ],
-    num: [
-      ['1','2','3','4','5','6','7','8','9','0'],
-      ['-','=','[',']','\\',';',"'",',','.'],
-      [{l:'Tab',w:true,seq:'\t'},'/','`','~','!','@','#','$',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ],
-    sym: [
-      ['!','@','#','$','%','^','&','*','(',')'],
-      ['_','+','{','}','|',':','"','<','>'],
-      [{l:'Tab',w:true,seq:'\t'},'?','~','`','\\','/','.','=',{l:'Del',w:true,seq:'\x7f'}],
-      [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-    ]
-  };
-
-  const FN_LAYER = [
-    [{l:'F1',seq:'\x1bOP'},{l:'F2',seq:'\x1bOQ'},{l:'F3',seq:'\x1bOR'},{l:'F4',seq:'\x1bOS'},{l:'F5',seq:'\x1b[15~'},{l:'F6',seq:'\x1b[17~'}],
-    [{l:'F7',seq:'\x1b[18~'},{l:'F8',seq:'\x1b[19~'},{l:'F9',seq:'\x1b[20~'},{l:'F10',seq:'\x1b[21~'},{l:'F11',seq:'\x1b[23~'},{l:'F12',seq:'\x1b[24~'}],
-    [{l:'Home',seq:'\x1b[H'},{l:'End',seq:'\x1b[F'},{l:'PgUp',seq:'\x1b[5~'},{l:'PgDn',seq:'\x1b[6~'},{l:'Ins',seq:'\x1b[2~'},{l:'Del',seq:'\x1b[3~'}],
-    [{l:'▲Ln',action:'scroll-up'},{l:'▼Ln',action:'scroll-down'},{l:'▲5Ln',action:'scroll-up-5'},{l:'▼5Ln',action:'scroll-down-5'},{l:'Top',action:'scroll-top'},{l:'Btm',action:'scroll-bottom'}],
-    [{l:'Esc',w:true,seq:'\x1b'},{l:'Space',cls:'space',ch:' '},{l:'Enter',cls:'enter-key',seq:'\r'}]
-  ];
-
   // --- State ---
-  let currentLayer = 'alpha';
-  let mods = { ctrl: false, alt: false, shift: false, fn: false };
   let selectMode = false;
   let sshConnected = false;
   let ws = null;
@@ -262,18 +195,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     term.open(document.getElementById('terminal'));
     fitAddon.fit();
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
-
-    if (isMobile) {
-      term.attachCustomKeyEventHandler(() => false);
-      const xtermTextarea = document.querySelector('#terminal .xterm-helper-textarea');
-      if (xtermTextarea) {
-        xtermTextarea.setAttribute('readonly', 'readonly');
-        xtermTextarea.setAttribute('inputmode', 'none');
-      }
-    }
-
-    // Forward xterm.js keyboard input to WebSocket (enables desktop keyboard)
+    // Forward keyboard input to WebSocket
     term.onData((data) => sendInput(data));
 
     new ResizeObserver(() => {
@@ -402,35 +324,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
     }
   }
 
-  // --- Keyboard rendering ---
-  function renderKeyboard() {
-    const container = document.getElementById('key-layers');
-    container.innerHTML = '';
-    const rows = mods.fn ? FN_LAYER : LAYERS[currentLayer];
-
-    rows.forEach(row => {
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'key-row';
-      row.forEach(k => {
-        const btn = document.createElement('button');
-        if (typeof k === 'string') {
-          const display = (mods.shift && currentLayer === 'alpha') ? k.toUpperCase() : k;
-          btn.className = 'key';
-          btn.textContent = display;
-          btn.dataset.ch = display;
-        } else {
-          btn.className = 'key' + (k.w ? ' wide' : '') + (k.cls ? ' ' + k.cls : '');
-          btn.textContent = k.l;
-          if (k.seq) btn.dataset.seq = k.seq;
-          if (k.ch) btn.dataset.ch = k.ch;
-          if (k.action) btn.dataset.action = k.action;
-        }
-        rowDiv.appendChild(btn);
-      });
-      container.appendChild(rowDiv);
-    });
-  }
-
   // --- Scroll actions ---
   function sendMouseWheel(up, count) {
     const btn = up ? 64 : 65;
@@ -447,35 +340,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       case 'scroll-down-5':term.scrollLines(5);  sendMouseWheel(false, 5); break;
       case 'scroll-top':   term.scrollToTop();   sendMouseWheel(true, 100); break;
       case 'scroll-bottom':term.scrollToBottom(); sendMouseWheel(false, 100); break;
-    }
-  }
-
-  // --- Input processing ---
-  function processKey(ch, seq) {
-    let data = seq || ch;
-    if (!data) return;
-
-    if (mods.shift && ch && ch.length === 1 && !seq) {
-      data = ch.toUpperCase();
-    }
-    if (mods.ctrl && data.length === 1) {
-      const code = data.toUpperCase().charCodeAt(0);
-      if (code >= 65 && code <= 90) {
-        data = String.fromCharCode(code - 64);
-      }
-    }
-    if (mods.alt && data.length === 1) {
-      data = '\x1b' + data;
-    }
-
-    sendInput(data);
-
-    if (mods.ctrl) { mods.ctrl = false; document.getElementById('mod-ctrl').classList.remove('active'); }
-    if (mods.alt) { mods.alt = false; document.getElementById('mod-alt').classList.remove('active'); }
-    if (mods.shift) {
-      mods.shift = false;
-      document.getElementById('mod-shift').classList.remove('active');
-      if (currentLayer === 'alpha') renderKeyboard();
     }
   }
 
@@ -509,46 +373,19 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       disconnect();
     });
 
-    // Modifier buttons
-    document.querySelectorAll('.mod-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Shortcut keys
+    document.querySelectorAll('.shortcut-key').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        const mod = btn.dataset.mod;
-        mods[mod] = !mods[mod];
-        btn.classList.toggle('active', mods[mod]);
-        if (mod === 'fn' || (mod === 'shift' && currentLayer === 'alpha')) {
-          renderKeyboard();
-        }
+        sendInput(btn.dataset.seq);
       });
-    });
-
-    // Layer tabs
-    document.querySelectorAll('.layer-tab').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        currentLayer = tab.dataset.layer;
-        document.querySelectorAll('.layer-tab').forEach(t => t.classList.toggle('active', t === tab));
-        renderKeyboard();
-      });
-    });
-
-    // Key press (event delegation)
-    document.getElementById('key-layers').addEventListener('pointerdown', (e) => {
-      const btn = e.target.closest('.key');
-      if (!btn) return;
-      e.preventDefault();
-      if (btn.dataset.action) {
-        handleScrollAction(btn.dataset.action);
-      } else {
-        processKey(btn.dataset.ch, btn.dataset.seq);
-      }
     });
 
     // Arrow keys
     document.querySelectorAll('.arrow-key').forEach(btn => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        processKey(null, btn.dataset.seq);
+        sendInput(btn.dataset.seq);
       });
     });
 
@@ -713,7 +550,6 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   // --- Init ---
   document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
-    renderKeyboard();
     bindEvents();
     // Focus the host input for convenience
     document.getElementById('ssh-host').focus();
