@@ -235,6 +235,111 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 .arrow-key.pg { font-size: 12px; font-weight: 600; }
 .arrow-key:active { background: #3b4261; }
 
+/* Quick action row */
+.quick-row {
+  display: flex; gap: 3px; margin-bottom: 3px; padding: 0 2px;
+}
+.quick-btn {
+  flex: 1; height: 36px; border: none; border-radius: 6px;
+  background: #292e42; color: #9ece6a; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.quick-btn:active { background: #3b4261; }
+
+/* Overlay dialog (file browser / prompt) */
+.dialog-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+}
+.dialog-overlay.hidden { display: none; }
+.dialog-box {
+  width: 90%; max-width: 360px; max-height: 70vh; border-radius: 12px;
+  background: #24283b; border: 1px solid #3b4261; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.dialog-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid #3b4261; flex-shrink: 0;
+}
+.dialog-header h3 { font-size: 16px; color: #7aa2f7; }
+.dialog-close {
+  border: none; background: none; color: #565f89; font-size: 20px; cursor: pointer;
+  padding: 0 4px; line-height: 1;
+}
+.dialog-close:active { color: #c0caf5; }
+
+/* File browser */
+.dir-path {
+  padding: 8px 16px; font-size: 12px; color: #565f89;
+  background: #1a1b26; border-bottom: 1px solid #3b4261;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;
+}
+.dir-list {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.dir-item {
+  display: flex; align-items: center; padding: 10px 16px;
+  border-bottom: 1px solid #1a1b26; cursor: pointer;
+  color: #c0caf5; font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.dir-item:active { background: #3b4261; }
+.dir-item .icon { margin-right: 10px; color: #7aa2f7; }
+.dir-item.parent { color: #565f89; }
+.dialog-footer {
+  padding: 10px 16px; border-top: 1px solid #3b4261; flex-shrink: 0;
+}
+.dialog-footer button {
+  width: 100%; padding: 10px; border: none; border-radius: 6px;
+  background: #7aa2f7; color: #1a1b26; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.dialog-footer button:active { background: #89b4fa; }
+.dialog-footer .btn-row { display: flex; gap: 8px; }
+.dialog-footer .btn-row button { flex: 1; }
+.dialog-footer .upload-btn { background: #9ece6a; }
+.dialog-footer .upload-btn:active { background: #73daca; }
+
+.file-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid #1a1b26;
+  cursor: pointer; color: #c0caf5; font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.file-item:active { background: #3b4261; }
+.file-item .left { display: flex; align-items: center; min-width: 0; flex: 1; }
+.file-item .left .icon { margin-right: 10px; color: #565f89; flex-shrink: 0; }
+.file-item .left .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-item .size { color: #565f89; font-size: 12px; margin-left: 8px; flex-shrink: 0; }
+
+.upload-status {
+  padding: 8px 16px; font-size: 12px; color: #9ece6a;
+  text-align: center; display: none;
+}
+.upload-status.show { display: block; }
+
+/* Prompt dialog */
+.prompt-body {
+  padding: 16px;
+}
+.prompt-body input {
+  width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #3b4261;
+  background: #1a1b26; color: #c0caf5; font-size: 16px; outline: none;
+}
+.prompt-body input:focus { border-color: #7aa2f7; }
+.prompt-actions {
+  display: flex; gap: 8px; padding: 0 16px 16px;
+}
+.prompt-actions button {
+  flex: 1; padding: 10px; border: none; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.prompt-actions .cancel { background: #3b4261; color: #c0caf5; }
+.prompt-actions .confirm { background: #7aa2f7; color: #1a1b26; }
+.prompt-actions .cancel:active { background: #545c7e; }
+.prompt-actions .confirm:active { background: #89b4fa; }
+
 </style>
 </head>
 <body>
@@ -287,6 +392,42 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   </div>
 </div>
 
+<!-- File browser dialog -->
+<div id="filebrowser-overlay" class="dialog-overlay hidden">
+  <div class="dialog-box">
+    <div class="dialog-header">
+      <h3 id="fb-title">Select Folder</h3>
+      <button class="dialog-close" id="fb-close">&#x2715;</button>
+    </div>
+    <div class="dir-path" id="fb-path"></div>
+    <div class="dir-list" id="fb-list"></div>
+    <div class="upload-status" id="fb-upload-status"></div>
+    <div class="dialog-footer">
+      <div class="btn-row">
+        <button id="fb-select">cd here</button>
+        <button id="fb-upload" class="upload-btn">Upload here</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tmux session name prompt -->
+<div id="tmux-prompt-overlay" class="dialog-overlay hidden">
+  <div class="dialog-box">
+    <div class="dialog-header">
+      <h3>New tmux Session</h3>
+      <button class="dialog-close" id="tp-close">&#x2715;</button>
+    </div>
+    <div class="prompt-body">
+      <input type="text" id="tp-name" placeholder="Session name" autocapitalize="off" autocorrect="off">
+    </div>
+    <div class="prompt-actions">
+      <button class="cancel" id="tp-cancel">Cancel</button>
+      <button class="confirm" id="tp-confirm">Create</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <div id="terminal-wrap"><div id="terminal"></div></div>
   <div id="status-bar">
@@ -319,6 +460,15 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       <button class="shortcut-key" data-macro="tmux-session-list">^B+S</button>
       <button class="shortcut-key" data-macro="tmux-clear">Clear</button>
     </div>
+    <!-- Quick actions row -->
+    <div class="quick-row">
+      <button class="quick-btn" id="quick-upload-btn">Upload</button>
+      <button class="quick-btn" id="quick-cd-btn">cd...</button>
+      <button class="quick-btn" id="quick-tmux-work-btn">tmux work</button>
+      <button class="quick-btn" id="quick-tmux-new-btn">tmux new</button>
+      <button class="quick-btn" id="quick-download-btn">Download</button>
+    </div>
+    <input type="file" id="upload-file-input" multiple style="display:none">
     <!-- Arrow keys + PgUp/PgDn -->
     <div class="arrow-row">
       <button class="arrow-key pg" data-seq="&#x1b;[5~">PgUp</button>
@@ -758,6 +908,164 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         e.preventDefault();
         sendInput(btn.dataset.seq);
       });
+    });
+
+    // --- Quick actions ---
+    // File browser state
+    let fbCurrentPath = '';
+    let fbMode = 'cd'; // 'cd', 'upload', 'download'
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    }
+
+    async function fbNavigate(path) {
+      const res = await fetch('/api/browse?path=' + encodeURIComponent(path));
+      if (!res.ok) return;
+      const data = await res.json();
+      fbCurrentPath = data.path;
+      document.getElementById('fb-path').textContent = data.path;
+      const list = document.getElementById('fb-list');
+      const parentPath = data.path.replace(/\/[^/]+$/, '') || '/';
+      let html = `<div class="dir-item parent" data-path="${parentPath}"><span class="icon">&#x2B06;</span> ..</div>`;
+      html += data.dirs.map(d =>
+        `<div class="dir-item" data-path="${data.path === '/' ? '' : data.path}/${d}"><span class="icon">&#x1F4C1;</span> ${d}</div>`
+      ).join('');
+      if (fbMode === 'download' && data.files) {
+        html += data.files.map(f =>
+          `<div class="file-item" data-path="${data.path === '/' ? '' : data.path}/${f.name}"><span class="left"><span class="icon">&#x1F4C4;</span><span class="name">${f.name}</span></span><span class="size">${formatSize(f.size)}</span></div>`
+        ).join('');
+      }
+      list.innerHTML = html;
+    }
+
+    function openFileBrowser(mode) {
+      fbMode = mode;
+      const title = document.getElementById('fb-title');
+      const selectBtn = document.getElementById('fb-select');
+      const uploadBtn = document.getElementById('fb-upload');
+      const statusEl = document.getElementById('fb-upload-status');
+      statusEl.classList.remove('show');
+      statusEl.textContent = '';
+      if (mode === 'cd') {
+        title.textContent = 'Select Folder';
+        selectBtn.style.display = '';
+        uploadBtn.style.display = 'none';
+      } else if (mode === 'upload') {
+        title.textContent = 'Upload To...';
+        selectBtn.style.display = 'none';
+        uploadBtn.style.display = '';
+      } else {
+        title.textContent = 'Download File';
+        selectBtn.style.display = 'none';
+        uploadBtn.style.display = 'none';
+      }
+      document.getElementById('filebrowser-overlay').classList.remove('hidden');
+    }
+
+    document.getElementById('quick-cd-btn').addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      openFileBrowser('cd');
+      await fbNavigate('~');
+    });
+
+    document.getElementById('quick-upload-btn').addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      openFileBrowser('upload');
+      await fbNavigate('~');
+    });
+
+    document.getElementById('quick-download-btn').addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      openFileBrowser('download');
+      await fbNavigate('~');
+    });
+
+    document.getElementById('fb-list').addEventListener('click', async (e) => {
+      const dirItem = e.target.closest('.dir-item');
+      if (dirItem) { await fbNavigate(dirItem.dataset.path); return; }
+      const fileItem = e.target.closest('.file-item');
+      if (fileItem && fbMode === 'download') {
+        const filePath = fileItem.dataset.path;
+        const a = document.createElement('a');
+        a.href = '/api/download?path=' + encodeURIComponent(filePath);
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    });
+
+    document.getElementById('fb-select').addEventListener('click', () => {
+      if (fbCurrentPath) {
+        sendInput('cd ' + fbCurrentPath.replace(/ /g, '\\ ') + '\r');
+      }
+      document.getElementById('filebrowser-overlay').classList.add('hidden');
+    });
+
+    // Upload
+    document.getElementById('fb-upload').addEventListener('click', () => {
+      document.getElementById('upload-file-input').click();
+    });
+
+    document.getElementById('upload-file-input').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files.length || !fbCurrentPath) return;
+      const statusEl = document.getElementById('fb-upload-status');
+      statusEl.classList.add('show');
+      let done = 0;
+      for (const file of files) {
+        statusEl.textContent = `Uploading ${file.name}... (${done + 1}/${files.length})`;
+        const form = new FormData();
+        form.append('path', fbCurrentPath);
+        form.append('file', file);
+        await fetch('/api/upload', { method: 'POST', body: form });
+        done++;
+      }
+      statusEl.textContent = `${done} file(s) uploaded`;
+      e.target.value = '';
+      await fbNavigate(fbCurrentPath);
+      setTimeout(() => statusEl.classList.remove('show'), 2000);
+    });
+
+    document.getElementById('fb-close').addEventListener('click', () => {
+      document.getElementById('filebrowser-overlay').classList.add('hidden');
+    });
+
+    // tmux work
+    document.getElementById('quick-tmux-work-btn').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      sendInput('tmux has-session -t work 2>/dev/null && tmux attach -t work || tmux new -s work\r');
+    });
+
+    // tmux new (prompt for name)
+    document.getElementById('quick-tmux-new-btn').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      document.getElementById('tp-name').value = '';
+      document.getElementById('tmux-prompt-overlay').classList.remove('hidden');
+      setTimeout(() => document.getElementById('tp-name').focus(), 50);
+    });
+
+    function doTmuxNew() {
+      const name = document.getElementById('tp-name').value.trim();
+      if (name) {
+        sendInput('tmux new -s ' + name.replace(/ /g, '-') + '\r');
+      }
+      document.getElementById('tmux-prompt-overlay').classList.add('hidden');
+    }
+
+    document.getElementById('tp-confirm').addEventListener('click', doTmuxNew);
+    document.getElementById('tp-cancel').addEventListener('click', () => {
+      document.getElementById('tmux-prompt-overlay').classList.add('hidden');
+    });
+    document.getElementById('tp-close').addEventListener('click', () => {
+      document.getElementById('tmux-prompt-overlay').classList.add('hidden');
+    });
+    document.getElementById('tp-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); doTmuxNew(); }
     });
 
     // Touch scrolling on terminal area (with over-scroll support)
