@@ -90,6 +90,31 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 .host-status.checking { background: #e0af68; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+/* Login overlay */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: #1a1b26; display: flex; align-items: center; justify-content: center;
+}
+#login-overlay.hidden { display: none; }
+#login-form {
+  width: 85%; max-width: 320px; text-align: center;
+}
+#login-form h1 { font-size: 24px; color: #7aa2f7; margin-bottom: 8px; }
+#login-form p { font-size: 13px; color: #565f89; margin-bottom: 24px; }
+#login-form input {
+  width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #3b4261;
+  background: #24283b; color: #c0caf5; font-size: 18px; text-align: center;
+  letter-spacing: 8px; outline: none; margin-bottom: 12px;
+}
+#login-form input:focus { border-color: #7aa2f7; }
+#login-form button {
+  width: 100%; padding: 12px; border: none; border-radius: 8px;
+  background: #7aa2f7; color: #1a1b26; font-size: 16px; font-weight: 600;
+  cursor: pointer;
+}
+#login-form button:active { background: #89b4fa; }
+#login-error { color: #f7768e; font-size: 13px; margin-top: 8px; min-height: 20px; }
+
 /* Host edit overlay */
 #host-edit-overlay {
   position: fixed; inset: 0; z-index: 110;
@@ -351,6 +376,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 </style>
 </head>
 <body>
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div id="login-form">
+    <h1>Remote Term</h1>
+    <p>Enter password to continue</p>
+    <input type="password" id="login-password" placeholder="Password" autocomplete="off" inputmode="numeric">
+    <button id="login-btn">Login</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
 <!-- Hosts page -->
 <div id="hosts-page">
   <div class="hosts-header">
@@ -504,6 +540,22 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   let fitAddon = null;
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
+
+  // --- Auth ---
+  let authToken = sessionStorage.getItem('auth_token') || '';
+
+  async function doLogin(password) {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return data.error || 'Login failed';
+    authToken = data.token;
+    sessionStorage.setItem('auth_token', authToken);
+    return null;
+  }
 
   // --- Host API ---
   async function apiGetHosts() {
@@ -1305,7 +1357,52 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     bindEvents();
-    showHostsPage();
+
+    // Login handling
+    const loginOverlay = document.getElementById('login-overlay');
+    const loginBtn = document.getElementById('login-btn');
+    const loginInput = document.getElementById('login-password');
+    const loginError = document.getElementById('login-error');
+
+    async function tryLogin() {
+      const pw = loginInput.value;
+      if (!pw) return;
+      loginBtn.disabled = true;
+      loginBtn.textContent = '...';
+      const err = await doLogin(pw);
+      if (err) {
+        loginError.textContent = err;
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+        loginInput.value = '';
+        loginInput.focus();
+      } else {
+        loginOverlay.classList.add('hidden');
+        showHostsPage();
+      }
+    }
+
+    loginBtn.addEventListener('click', tryLogin);
+    loginInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') tryLogin();
+    });
+
+    // If we have a saved token, verify it
+    if (authToken) {
+      fetch('/api/hosts', { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(res => {
+          if (res.ok) {
+            loginOverlay.classList.add('hidden');
+            showHostsPage();
+          } else {
+            sessionStorage.removeItem('auth_token');
+            authToken = '';
+            loginInput.focus();
+          }
+        });
+    } else {
+      loginInput.focus();
+    }
   });
 })();
 </script>
