@@ -81,6 +81,14 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 }
 .host-card-actions button:active { background: #3b4261; }
 .host-card-actions .delete-btn:active { color: #f7768e; }
+.host-status {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-left: 8px;
+  background: #3b4261; transition: background 0.3s;
+}
+.host-status.online { background: #9ece6a; }
+.host-status.offline { background: #f7768e; }
+.host-status.checking { background: #e0af68; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 /* Host edit overlay */
 #host-edit-overlay {
@@ -723,8 +731,23 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
           <button class="edit-btn" data-id="${h.id}" title="Edit">&#x270E;</button>
           <button class="delete-btn" data-id="${h.id}" title="Delete">&#x2715;</button>
         </div>
+        <div class="host-status checking" id="status-${h.id}" title="Checking..."></div>
       </div>
     `).join('');
+  }
+
+  async function refreshHostStatus() {
+    try {
+      const resp = await fetch('/api/hosts/status');
+      const status = await resp.json();
+      for (const [id, online] of Object.entries(status)) {
+        const dot = document.getElementById('status-' + id);
+        if (dot) {
+          dot.className = 'host-status ' + (online ? 'online' : 'offline');
+          dot.title = online ? 'Online' : 'Offline';
+        }
+      }
+    } catch (e) { /* ignore */ }
   }
 
   function escapeHtml(s) {
@@ -736,6 +759,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   async function showHostsPage() {
     document.getElementById('hosts-page').classList.remove('hidden');
     await renderHosts();
+    refreshHostStatus();
   }
 
   function hideHostsPage() {

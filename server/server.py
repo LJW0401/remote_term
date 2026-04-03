@@ -264,6 +264,34 @@ async def api_download(request):
     })
 
 
+async def check_host(host, port, timeout=3):
+    """Check if a host's SSH port is reachable via TCP connect."""
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=timeout,
+        )
+        writer.close()
+        await writer.wait_closed()
+        return True
+    except Exception:
+        return False
+
+
+async def api_hosts_status(request):
+    """Return online/offline status for all saved hosts."""
+    hosts = load_hosts()
+    if not hosts:
+        return web.json_response({})
+
+    async def probe(h):
+        online = await check_host(h['host'], h.get('port', 22))
+        return h['id'], online
+
+    results = await asyncio.gather(*(probe(h) for h in hosts))
+    return web.json_response({hid: online for hid, online in results})
+
+
 async def handle_index(request):
     return web.FileResponse(os.path.join(STATIC_DIR, 'index.html'))
 
@@ -275,6 +303,7 @@ def create_app():
     app.router.add_post('/api/upload', api_upload)
     app.router.add_get('/api/download', api_download)
     app.router.add_get('/api/hosts', api_hosts_list)
+    app.router.add_get('/api/hosts/status', api_hosts_status)
     app.router.add_post('/api/hosts', api_hosts_create)
     app.router.add_put('/api/hosts/{id}', api_hosts_update)
     app.router.add_delete('/api/hosts/{id}', api_hosts_delete)
