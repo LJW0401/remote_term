@@ -115,6 +115,39 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 #login-form button:active { background: #89b4fa; }
 #login-error { color: #f7768e; font-size: 13px; margin-top: 8px; min-height: 20px; }
 
+/* Device management overlay */
+#devices-overlay {
+  position: fixed; inset: 0; z-index: 130;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+}
+#devices-overlay.hidden { display: none; }
+#devices-panel {
+  width: 90%; max-width: 380px; max-height: 70vh; padding: 20px; border-radius: 12px;
+  background: #24283b; border: 1px solid #3b4261; display: flex; flex-direction: column;
+}
+#devices-panel h2 { text-align: center; margin-bottom: 14px; color: #7aa2f7; font-size: 18px; }
+.device-list { flex: 1; overflow-y: auto; margin-bottom: 12px; }
+.device-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: #1a1b26; border-radius: 8px; margin-bottom: 6px;
+}
+.device-item-info { flex: 1; min-width: 0; }
+.device-item-label { font-size: 14px; color: #c0caf5; }
+.device-item-id { font-size: 11px; color: #565f89; margin-top: 2px; font-family: monospace; }
+.device-item-self { font-size: 11px; color: #9ece6a; margin-left: 6px; }
+.device-item button {
+  padding: 4px 10px; border: none; border-radius: 4px;
+  background: #3b4261; color: #f7768e; font-size: 12px; cursor: pointer; flex-shrink: 0; margin-left: 8px;
+}
+.device-item button:active { background: #545c7e; }
+.devices-actions { display: flex; gap: 8px; }
+.devices-actions button {
+  flex: 1; padding: 10px; border: none; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.devices-actions .trust-btn { background: #9ece6a; color: #1a1b26; }
+.devices-actions .close-btn { background: #3b4261; color: #c0caf5; }
+
 /* Host edit overlay */
 #host-edit-overlay {
   position: fixed; inset: 0; z-index: 110;
@@ -148,23 +181,23 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 #host-edit-error { color: #f7768e; font-size: 13px; margin-top: 10px; text-align: center; min-height: 20px; }
 
 /* Quick connect overlay (no save) */
-#login-overlay {
+#quick-connect-overlay {
   position: fixed; inset: 0; z-index: 110;
   background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
 }
-#login-overlay.hidden { display: none; }
-#login-form {
+#quick-connect-overlay.hidden { display: none; }
+#quick-connect-form {
   width: 90%; max-width: 360px; padding: 24px; border-radius: 12px;
   background: #24283b; border: 1px solid #3b4261;
 }
-#login-form h2 { text-align: center; margin-bottom: 18px; color: #7aa2f7; font-size: 20px; }
-#login-form .field { margin-bottom: 12px; }
-#login-form label { display: block; font-size: 12px; color: #565f89; margin-bottom: 4px; }
-#login-form input {
+#quick-connect-form h2 { text-align: center; margin-bottom: 18px; color: #7aa2f7; font-size: 20px; }
+#quick-connect-form .field { margin-bottom: 12px; }
+#quick-connect-form label { display: block; font-size: 12px; color: #565f89; margin-bottom: 4px; }
+#quick-connect-form input {
   width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #3b4261;
   background: #1a1b26; color: #c0caf5; font-size: 16px; outline: none;
 }
-#login-form input:focus { border-color: #7aa2f7; }
+#quick-connect-form input:focus { border-color: #7aa2f7; }
 #ssh-connect-btn {
   width: 100%; padding: 12px; border: none; border-radius: 6px;
   background: #7aa2f7; color: #1a1b26; font-size: 16px; font-weight: 600;
@@ -392,11 +425,24 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   <div class="hosts-header">
     <h1>Hosts</h1>
     <div class="hosts-header-actions">
+      <button class="host-quick-btn" id="devices-btn" title="Trusted Devices">&#x1F512;</button>
       <button class="host-quick-btn" id="quick-connect-btn" title="Quick Connect">&#x26A1;</button>
       <button class="host-add-btn" id="add-host-btn" title="Add Host">+</button>
     </div>
   </div>
   <div class="hosts-list" id="hosts-list"></div>
+</div>
+
+<!-- Device management overlay -->
+<div id="devices-overlay" class="hidden">
+  <div id="devices-panel">
+    <h2>Trusted Devices</h2>
+    <div class="device-list" id="device-list"></div>
+    <div class="devices-actions">
+      <button class="close-btn" id="devices-close-btn">Close</button>
+      <button class="trust-btn" id="trust-this-btn">Trust This Device</button>
+    </div>
+  </div>
 </div>
 
 <!-- Host edit overlay -->
@@ -419,8 +465,8 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
 </div>
 
 <!-- Quick connect overlay -->
-<div id="login-overlay" class="hidden">
-  <div id="login-form">
+<div id="quick-connect-overlay" class="hidden">
+  <div id="quick-connect-form">
     <h2>Quick Connect</h2>
     <div class="field-row">
       <div class="field"><label>Host</label><input type="text" id="ssh-host" placeholder="192.168.1.100" autocapitalize="off" autocorrect="off"></div>
@@ -544,17 +590,44 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
   // --- Auth ---
   let authToken = sessionStorage.getItem('auth_token') || '';
 
+  // Device ID: persistent per browser
+  function getDeviceId() {
+    let id = localStorage.getItem('device_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('device_id', id);
+    }
+    return id;
+  }
+  const deviceId = getDeviceId();
+
   async function doLogin(password) {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, device_id: deviceId }),
     });
     const data = await res.json();
     if (!res.ok) return data.error || 'Login failed';
     authToken = data.token;
     sessionStorage.setItem('auth_token', authToken);
     return null;
+  }
+
+  async function tryDeviceAuth() {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: deviceId }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.ok && data.trusted) {
+      authToken = data.token;
+      sessionStorage.setItem('auth_token', authToken);
+      return true;
+    }
+    return false;
   }
 
   // --- Host API ---
@@ -910,6 +983,63 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       }
     });
 
+    // --- Device whitelist management ---
+    async function renderDevices() {
+      const list = document.getElementById('device-list');
+      try {
+        const res = await fetch('/api/trusted-devices');
+        const devices = await res.json();
+        if (devices.length === 0) {
+          list.innerHTML = '<div style="text-align:center;color:#565f89;padding:20px;">No trusted devices</div>';
+        } else {
+          list.innerHTML = devices.map(d => `
+            <div class="device-item">
+              <div class="device-item-info">
+                <div class="device-item-label">${escapeHtml(d.label)}${d.id === deviceId ? '<span class="device-item-self">(this)</span>' : ''}</div>
+                <div class="device-item-id">${escapeHtml(d.id.substring(0, 8))}...</div>
+              </div>
+              <button data-id="${escapeHtml(d.id)}">Remove</button>
+            </div>
+          `).join('');
+        }
+      } catch (e) { list.innerHTML = '<div style="color:#f7768e;padding:12px;">Failed to load</div>'; }
+    }
+
+    document.getElementById('devices-btn').addEventListener('click', () => {
+      document.getElementById('devices-overlay').classList.remove('hidden');
+      renderDevices();
+    });
+
+    document.getElementById('devices-close-btn').addEventListener('click', () => {
+      document.getElementById('devices-overlay').classList.add('hidden');
+    });
+
+    document.getElementById('trust-this-btn').addEventListener('click', async () => {
+      const label = navigator.userAgent.includes('iPhone') ? 'iPhone'
+        : navigator.userAgent.includes('iPad') ? 'iPad'
+        : navigator.userAgent.includes('Android') ? 'Android'
+        : navigator.userAgent.includes('Mac') ? 'Mac'
+        : navigator.userAgent.includes('Windows') ? 'Windows'
+        : 'Device';
+      const res = await fetch('/api/trusted-devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId, label }),
+      });
+      const data = await res.json();
+      if (res.ok) { renderDevices(); }
+      else { alert(data.error || 'Failed'); }
+    });
+
+    document.getElementById('device-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (!confirm('Remove this device from whitelist?')) return;
+      await fetch('/api/trusted-devices/' + encodeURIComponent(id), { method: 'DELETE' });
+      renderDevices();
+    });
+
     // Quick connect
     document.getElementById('quick-connect-btn').addEventListener('click', () => {
       document.getElementById('ssh-host').value = '';
@@ -917,17 +1047,17 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       document.getElementById('ssh-user').value = '';
       document.getElementById('ssh-pass').value = '';
       document.getElementById('ssh-error').textContent = '';
-      document.getElementById('login-overlay').classList.remove('hidden');
+      document.getElementById('quick-connect-overlay').classList.remove('hidden');
       document.getElementById('ssh-host').focus();
     });
 
     document.getElementById('quick-back-btn').addEventListener('click', () => {
-      document.getElementById('login-overlay').classList.add('hidden');
+      document.getElementById('quick-connect-overlay').classList.add('hidden');
     });
 
     // SSH quick connect form
     const connectBtn = document.getElementById('ssh-connect-btn');
-    const loginInputs = document.querySelectorAll('#login-form input');
+    const loginInputs = document.querySelectorAll('#quick-connect-form input');
 
     function doConnect() {
       const host = document.getElementById('ssh-host').value.trim();
@@ -939,7 +1069,7 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
         document.getElementById('ssh-error').textContent = 'Host and Username are required';
         return;
       }
-      document.getElementById('login-overlay').classList.add('hidden');
+      document.getElementById('quick-connect-overlay').classList.add('hidden');
       hideHostsPage();
       connect({ host, port, username, password });
     }
@@ -1387,22 +1517,29 @@ html, body { height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5
       if (e.key === 'Enter') tryLogin();
     });
 
-    // If we have a saved token, verify it
-    if (authToken) {
-      fetch('/api/hosts', { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(res => {
-          if (res.ok) {
-            loginOverlay.classList.add('hidden');
-            showHostsPage();
-          } else {
-            sessionStorage.removeItem('auth_token');
-            authToken = '';
-            loginInput.focus();
-          }
-        });
-    } else {
+    // Try: saved token → trusted device → show login
+    async function initAuth() {
+      // 1. Check saved token
+      if (authToken) {
+        const res = await fetch('/api/hosts', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        if (res.ok) {
+          loginOverlay.classList.add('hidden');
+          showHostsPage();
+          return;
+        }
+        sessionStorage.removeItem('auth_token');
+        authToken = '';
+      }
+      // 2. Try trusted device auto-login
+      if (await tryDeviceAuth()) {
+        loginOverlay.classList.add('hidden');
+        showHostsPage();
+        return;
+      }
+      // 3. Show login form
       loginInput.focus();
     }
+    initAuth();
   });
 })();
 </script>

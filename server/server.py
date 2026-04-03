@@ -27,9 +27,12 @@ valid_tokens = set()
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
-        return {'password_hash': hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()}
+        return {'password_hash': hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest(),
+                'trusted_devices': []}
     with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+        cfg = json.load(f)
+        cfg.setdefault('trusted_devices', [])
+        return cfg
 
 
 def save_config(config):
@@ -313,16 +316,24 @@ async def api_hosts_status(request):
 
 
 async def api_login(request):
-    """Verify password and return a session token."""
+    """Verify password (or trusted device) and return a session token."""
     data = await request.json()
+    device_id = data.get('device_id', '')
     password = data.get('password', '')
     config = load_config()
-    pw_hash = hashlib.sha256(password.encode()).hexdigest()
-    if pw_hash != config.get('password_hash'):
-        return web.json_response({'error': 'Wrong password'}, status=401)
+
+    # Check if device is in whitelist
+    trusted = config.get('trusted_devices', [])
+    is_trusted = any(d['id'] == device_id for d in trusted) if device_id else False
+
+    if not is_trusted:
+        pw_hash = hashlib.sha256(password.encode()).hexdigest()
+        if pw_hash != config.get('password_hash'):
+            return web.json_response({'error': 'Wrong password'}, status=401)
+
     token = secrets.token_hex(16)
     valid_tokens.add(token)
-    resp = web.json_response({'ok': True, 'token': token})
+    resp = web.json_response({'ok': True, 'token': token, 'trusted': is_trusted})
     resp.set_cookie('auth_token', token, httponly=True, samesite='Strict')
     return resp
 
@@ -340,6 +351,42 @@ async def api_change_password(request):
     config['password_hash'] = hashlib.sha256(new_pw.encode()).hexdigest()
     save_config(config)
     valid_tokens.clear()
+    return web.json_response({'ok': True})
+
+
+async def api_trusted_devices_list(request):
+    """List all trusted devices."""
+    config = load_config()
+    return web.json_response(config.get('trusted_devices', []))
+
+
+async def api_trusted_devices_add(request):
+    """Add a device to the whitelist."""
+    data = await request.json()
+    device_id = data.get('device_id', '').strip()
+    label = data.get('label', '').strip() or 'Unknown Device'
+    if not device_id:
+        return web.json_response({'error': 'device_id is required'}, status=400)
+    config = load_config()
+    trusted = config.get('trusted_devices', [])
+    if any(d['id'] == device_id for d in trusted):
+        return web.json_response({'error': 'Device already trusted'}, status=409)
+    trusted.append({'id': device_id, 'label': label, 'added': int(time.time())})
+    config['trusted_devices'] = trusted
+    save_config(config)
+    return web.json_response({'ok': True})
+
+
+async def api_trusted_devices_delete(request):
+    """Remove a device from the whitelist."""
+    device_id = request.match_info['device_id']
+    config = load_config()
+    trusted = config.get('trusted_devices', [])
+    new_trusted = [d for d in trusted if d['id'] != device_id]
+    if len(new_trusted) == len(trusted):
+        return web.json_response({'error': 'Not found'}, status=404)
+    config['trusted_devices'] = new_trusted
+    save_config(config)
     return web.json_response({'ok': True})
 
 
@@ -376,6 +423,9 @@ def create_app():
     app = web.Application(middlewares=[auth_middleware])
     app.router.add_post('/api/login', api_login)
     app.router.add_post('/api/change-password', api_change_password)
+    app.router.add_get('/api/trusted-devices', api_trusted_devices_list)
+    app.router.add_post('/api/trusted-devices', api_trusted_devices_add)
+    app.router.add_delete('/api/trusted-devices/{device_id}', api_trusted_devices_delete)
     app.router.add_get('/ws', websocket_handler)
     app.router.add_get('/api/browse', api_browse_dir)
     app.router.add_post('/api/upload', api_upload)
