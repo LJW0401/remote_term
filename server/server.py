@@ -2,9 +2,11 @@
 """Web SSH Server - browser-based SSH client with custom mobile UI"""
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
+import secrets
 import time
 
 import asyncssh
@@ -16,6 +18,24 @@ log = logging.getLogger(__name__)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web')
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 HOSTS_FILE = os.path.join(DATA_DIR, 'hosts.json')
+CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
+DEFAULT_PASSWORD = '000000'
+
+# Active session tokens
+valid_tokens = set()
+
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {'password_hash': hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()}
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def save_config(config):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
 
 def load_hosts():
@@ -292,12 +312,70 @@ async def api_hosts_status(request):
     return web.json_response({hid: online for hid, online in results})
 
 
+async def api_login(request):
+    """Verify password and return a session token."""
+    data = await request.json()
+    password = data.get('password', '')
+    config = load_config()
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    if pw_hash != config.get('password_hash'):
+        return web.json_response({'error': 'Wrong password'}, status=401)
+    token = secrets.token_hex(16)
+    valid_tokens.add(token)
+    resp = web.json_response({'ok': True, 'token': token})
+    resp.set_cookie('auth_token', token, httponly=True, samesite='Strict')
+    return resp
+
+
+async def api_change_password(request):
+    """Change the login password."""
+    data = await request.json()
+    old_pw = data.get('old_password', '')
+    new_pw = data.get('new_password', '')
+    if not new_pw:
+        return web.json_response({'error': 'New password is required'}, status=400)
+    config = load_config()
+    if hashlib.sha256(old_pw.encode()).hexdigest() != config.get('password_hash'):
+        return web.json_response({'error': 'Wrong old password'}, status=401)
+    config['password_hash'] = hashlib.sha256(new_pw.encode()).hexdigest()
+    save_config(config)
+    valid_tokens.clear()
+    return web.json_response({'ok': True})
+
+
+def check_auth(request):
+    """Check if request has a valid auth token."""
+    token = request.cookies.get('auth_token', '')
+    if not token:
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            token = auth[7:]
+    return token in valid_tokens
+
+
+@web.middleware
+async def auth_middleware(request, handler):
+    # Allow login endpoint and static assets without auth
+    path = request.path
+    if path == '/api/login' or path == '/':
+        return await handler(request)
+    # Static assets (css, js, fonts, images)
+    if '.' in path.split('/')[-1] and not path.startswith('/api/'):
+        return await handler(request)
+    # All API and WebSocket requests require auth
+    if not check_auth(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    return await handler(request)
+
+
 async def handle_index(request):
     return web.FileResponse(os.path.join(STATIC_DIR, 'index.html'))
 
 
 def create_app():
-    app = web.Application()
+    app = web.Application(middlewares=[auth_middleware])
+    app.router.add_post('/api/login', api_login)
+    app.router.add_post('/api/change-password', api_change_password)
     app.router.add_get('/ws', websocket_handler)
     app.router.add_get('/api/browse', api_browse_dir)
     app.router.add_post('/api/upload', api_upload)
